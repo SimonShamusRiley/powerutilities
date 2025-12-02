@@ -1,0 +1,15 @@
+Package: powerutilities
+Title: Tools for Power Analysis with glmmTMB
+Version: 0.0.0.1
+Authors@R: 
+    person("Simon", "Riley", , "ssr@agro.au.dk", role = c("aut", "cre"))
+Description: This package contains tools for power analysis using glmmTMB.
+imports: 
+  dplyr
+  car
+suggests:
+  glmmTMB
+License: None, at present
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
