@@ -12,6 +12,7 @@
 #'   terms, whereas type III tests each term after all others, including
 #'   higher-order terms.
 #' @param alpha The nominal type I error rate. Defaults to 0.05.
+#' @export
 power_ftest = function(mod, ddf = 'containment', type = 2, alpha = 0.05) {
   
   anova(mod, method = ddf, type = type) |> 
@@ -37,6 +38,7 @@ power_ftest = function(mod, ddf = 'containment', type = 2, alpha = 0.05) {
 #'   Should probably correspond to the value returned from a call to
 #'   power_ftest.
 #' @param alpha The nominal type I error rate. Defaults to 0.05.
+#' @export
 power_contrast = function(emm, contr_list, ddf, alpha = 0.05){
   emmeans::contrast(emm, contr_list, df = ddf) |> 
     as.data.frame() |>
