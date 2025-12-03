@@ -3,3 +3,4 @@
 S3method(anova,glmmTMB)
 export(power_contrast)
 export(power_ftest)
+importFrom(glmmTMB,glmmTMB)

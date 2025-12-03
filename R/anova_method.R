@@ -12,8 +12,9 @@
 #'   `TRUE`.
 #'
 #' @return a \code{\link{data.frame}}
-#'
-#' @exportS3Method
+#' 
+#' @importFrom glmmTMB glmmTMB
+#' @exportS3Method anova glmmTMB
 anova.glmmTMB <- function(model, method = "containment", type = 2, contr_sum = TRUE){
   
   #TODO: check to see if this makes a difference
@@ -52,3 +53,4 @@ anova.glmmTMB <- function(model, method = "containment", type = 2, contr_sum = T
   
   return(aov_out)
 }
+
