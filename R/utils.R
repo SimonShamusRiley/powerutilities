@@ -237,86 +237,90 @@ aov_formula_writer <- function(model){
   
   
   # Random Effects equation developer
-  random_vec <- c()
-  for(i in 1:num_random_eq) {
-    
-    eq <- unlist(names(model$modelInfo$reStruc$condReStruc)[i])
-    
-    # Replace -1 with +0
-    containsneg1 <- grepl("- 1", eq, fixed = TRUE)
-    if(containsneg1 == TRUE){
-      eq <- gsub("- 1", "+ 0", eq)
-    }
-    
-    terms <- trimws(strsplit(as.character(eq), "\\+")[[1]])
-    # Identify the type of random effects we have
-    if(trimws(strsplit(terms, "\\|")[[1]])[[1]] == "1") {
-      model_type <- "int"
-    } else if(any(grepl("0", terms) == TRUE) || any(grepl("-1", terms) == TRUE)) {
-      model_type <- "slope"
-    } else {
-      model_type <- "int_slope"
-    }
-    
-    
-    if(model_type == "int"){
-      rterm <- trimws(strsplit(terms, "\\|")[[1]])[[2]]
-      random_vec[length(random_vec)+1] <- rterm
-    } else if(model_type == "slope"){
+  if (num_random_eq > 0){
+    random_vec <- c()
+    for(i in 1:num_random_eq) {
       
-      # Identify the right hand side of the bar
-      # This is the appropriate intercept term
-      for(j in 1:length(terms)){
-        is_bar <- grep("\\|", terms[j])
-        
-        if(length(is_bar) > 0) {
-          rhs <-trimws(strsplit(terms[j], "\\|")[[1]])[2]
-        }
+      eq <- unlist(names(model$modelInfo$reStruc$condReStruc)[i])
+      
+      # Replace -1 with +0
+      containsneg1 <- grepl("- 1", eq, fixed = TRUE)
+      if(containsneg1 == TRUE){
+        eq <- gsub("- 1", "+ 0", eq)
       }
       
-      # Identify the left hand side of the bar and cross each term with the right hand side
-      # This is the random slope side
-      for(j in 1:length(terms)) {
-        lhs <- trimws(strsplit(terms[j], "\\|")[[1]])[1]
-        is_bar <- grep("\\|", terms[j])
-        
-        if(length(lhs) != 0 && lhs != "0") {
-          rterm <- paste(lhs,rhs,sep=":")
-          random_vec[length(random_vec)+1] <- rterm
-        }
+      terms <- trimws(strsplit(as.character(eq), "\\+")[[1]])
+      # Identify the type of random effects we have
+      if(trimws(strsplit(terms, "\\|")[[1]])[[1]] == "1") {
+        model_type <- "int"
+      } else if(any(grepl("0", terms) == TRUE) || any(grepl("-1", terms) == TRUE)) {
+        model_type <- "slope"
+      } else {
+        model_type <- "int_slope"
       }
       
-    } else if (model_type == "int_slope") {
       
-      # Identify the right hand side of the bar
-      # This is the appropriate intercept term
-      for(j in 1:length(terms)){
-        is_bar <- grep("\\|", terms[j])
+      if(model_type == "int"){
+        rterm <- trimws(strsplit(terms, "\\|")[[1]])[[2]]
+        random_vec[length(random_vec)+1] <- rterm
+      } else if(model_type == "slope"){
         
-        if(length(is_bar) > 0) {
-          rhs <-trimws(strsplit(terms[j], "\\|")[[1]])[2]
+        # Identify the right hand side of the bar
+        # This is the appropriate intercept term
+        for(j in 1:length(terms)){
+          is_bar <- grep("\\|", terms[j])
           
-          # Place in the rhs for the int term
-          random_vec[length(random_vec)+1] <- rhs
+          if(length(is_bar) > 0) {
+            rhs <-trimws(strsplit(terms[j], "\\|")[[1]])[2]
+          }
         }
-      }
-      
-      # Identify the left hand side of the bar and cross each term with the right hand side
-      # This is the random slope side
-      for(j in 1:length(terms)) {
-        lhs <- trimws(strsplit(terms[j], "\\|")[[1]])[1]
-        is_bar <- grep("\\|", terms[j])
         
-        if(length(lhs) != 0) {
-          rterm <- paste(lhs,rhs,sep=":")
-          random_vec[length(random_vec)+1] <- rterm
+        # Identify the left hand side of the bar and cross each term with the right hand side
+        # This is the random slope side
+        for(j in 1:length(terms)) {
+          lhs <- trimws(strsplit(terms[j], "\\|")[[1]])[1]
+          is_bar <- grep("\\|", terms[j])
+          
+          if(length(lhs) != 0 && lhs != "0") {
+            rterm <- paste(lhs,rhs,sep=":")
+            random_vec[length(random_vec)+1] <- rterm
+          }
+        }
+        
+      } else if (model_type == "int_slope") {
+        
+        # Identify the right hand side of the bar
+        # This is the appropriate intercept term
+        for(j in 1:length(terms)){
+          is_bar <- grep("\\|", terms[j])
+          
+          if(length(is_bar) > 0) {
+            rhs <-trimws(strsplit(terms[j], "\\|")[[1]])[2]
+            
+            # Place in the rhs for the int term
+            random_vec[length(random_vec)+1] <- rhs
+          }
+        }
+        
+        # Identify the left hand side of the bar and cross each term with the right hand side
+        # This is the random slope side
+        for(j in 1:length(terms)) {
+          lhs <- trimws(strsplit(terms[j], "\\|")[[1]])[1]
+          is_bar <- grep("\\|", terms[j])
+          
+          if(length(lhs) != 0) {
+            rterm <- paste(lhs,rhs,sep=":")
+            random_vec[length(random_vec)+1] <- rterm
+          }
         }
       }
     }
-  }
-  
-  random_eq <- paste(random_vec, collapse="+")
-  form <- formula(paste(y_name, "~", paste(fixed_eq, random_eq, sep="+")))
+    
+    random_eq <- paste(random_vec, collapse="+")
+    form <- formula(paste(y_name, "~", paste(fixed_eq, random_eq, sep="+")))
+  } else {
+    form <- formula(paste(y_name, '~', fixed_eq))
+  }  
   
   return(form)
 }

@@ -23,6 +23,11 @@ anova.glmmTMB <- function(model, method = "containment", type = 2, contr_sum = T
     on.exit(options(current_contrast_settings))
   }
   
+  if (length(ranef(model)$cond) == 1 & method != 'residual'){
+    method = 'residual'
+    warning('No random effects are present in the model: switching to residual degrees of freedom')
+  }
+  
   if (type == "III" || type == 3) {
     type = 3
   } else if (type == "II" || type == 2) {
@@ -39,8 +44,10 @@ anova.glmmTMB <- function(model, method = "containment", type = 2, contr_sum = T
       aov_out <- containment_aov(model, type)
     } else if (method == 'satterthwaite'){
       aov_out <- satterthwaite_aov(model, type)
+    } else if (method == 'residual') {
+      aov_out <- residual_aov(model, type)
     } else {  
-      stop ("Only containment, pinheiro-bates, satterthwaite, and asymptotic methods are supported at this time")
+      stop ("Only containment, pinheiro-bates, satterthwaite, residual, and asymptotic methods are supported at this time")
     }
   
   return(aov_out)
