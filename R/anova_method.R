@@ -1,24 +1,20 @@
-#' Performs F-test on coefficients of a model fit via glmmTMB using one of
-#' several available methods for calculating denomenator degrees of freedom
+#' @title Performs F-test on coefficients of a model fit via glmmTMB using one
+#'   of several available methods for calculating denomenator degrees of freedom
 #'
 #' @param model a \code{\link{glmmTMB}} model object
 #' @param method Currently supported options are: "containment" (the default),
-#'   "nlme" and "within-between"
-#' @param type Either 2 (default) or 3. Note that although the names are the
-#'   same, the meaning of "type 2" and "type 3" are different from what they
-#'   mean in SAS. See: `help(car::Anova)` for details.
-#' @param test.statistic Either 'F' or 'Chisq'.
+#'   "pinheiro-bates", "asymptotic" and "satterthwaite".
+#' @param type Either 2 (default) or 3 (note that either roman or arabic
+#'   numerals are acceptable). Type II tests each term after all other
+#'   non-higher-order terms, whereas type III tests each term after all other
+#'   terms, including higher-order terms.
 #' @param contr_sum Logical. Refit model using sum-to-zero contrasts? Default is
 #'   `TRUE`.
 #'
 #' @return a \code{\link{data.frame}}
-#' 
+#'
 #' @exportS3Method
-anova.glmmTMB <- function(model, method = "containment", type = 2, test.statistic = "F", contr_sum = TRUE){
-  
-  #if (class(model) != "glmmTMB") {
-  #  stop ("Only glmmTMB models are supported")
-  #}
+anova.glmmTMB <- function(model, method = "containment", type = 2, contr_sum = TRUE){
   
   #TODO: check to see if this makes a difference
   if (contr_sum == TRUE){
@@ -32,24 +28,20 @@ anova.glmmTMB <- function(model, method = "containment", type = 2, test.statisti
   } else if (type == "II" || type == 2) {
     type = 2
   } else {
-    stop ("Specified type not supported at this time")
+    stop ("type must be either 2 (testing each term after all other non-higher-order terms) or type 3 (testing each term after all other terms)")
   }
   
-  if(test.statistic == "F"){
-    if(method == "nlme") {
+   if(method == "pinheiro-bates") {
       aov_out <- nlme_aov(model, type)
-    } else if (method == "inner-outer") {
-      aov_out <- inner_outer_aov(model, type)
+    } else if (method == "asymptotic") {
+      aov_out <- asymptotic_aov(model, type)
     } else if (method == "containment") {
       aov_out <- containment_aov(model, type)
-    } else {
-      stop ("Only nlme, inner-outter, and containment methods are supported at this time")
+    } else if (method == 'satterthwaite'){
+      aov_out <- satterthwaite_aov(model, type)
+    } else {  
+      stop ("Only containment, pinheiro-bates, satterthwaite, and asymptotic methods are supported at this time")
     }
-  } else if(test.statistic == "Chisq") {
-    aov_out <- suppressForeignCheck(glmmTMB:::Anova.glmmTMB(model, type = type))
-  } else {
-    cat("Only F and Chisq test statistics are supported at this time")
-  }
   
   return(aov_out)
 }
