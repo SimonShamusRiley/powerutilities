@@ -7,7 +7,9 @@
 exclusive_terms(model, term)
 }
 \arguments{
-\item{term}{}
+\item{model}{A \code{\link{glmmTMB}} model}
+
+\item{term}{A model term}
 }
 \value{
 a \code{\link{data.frame}}

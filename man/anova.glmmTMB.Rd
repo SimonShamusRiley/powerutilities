@@ -2,28 +2,21 @@
 % Please edit documentation in R/anova_method.R
 \name{anova.glmmTMB}
 \alias{anova.glmmTMB}
-\title{Performs F-test on coefficients of a model fit via glmmTMB using one of
-several available methods for calculating denomenator degrees of freedom}
+\title{Performs F-test on coefficients of a model fit via glmmTMB using one
+of several available methods for calculating denomenator degrees of freedom}
 \usage{
-\method{anova}{glmmTMB}(
-  model,
-  method = "containment",
-  type = 2,
-  test.statistic = "F",
-  contr_sum = TRUE
-)
+\method{anova}{glmmTMB}(model, method = "containment", type = 2, contr_sum = TRUE)
 }
 \arguments{
 \item{model}{a \code{\link{glmmTMB}} model object}
 
 \item{method}{Currently supported options are: "containment" (the default),
-"nlme" and "within-between"}
+"pinheiro-bates", "asymptotic" and "satterthwaite".}
 
-\item{type}{Either 2 (default) or 3. Note that although the names are the
-same, the meaning of "type 2" and "type 3" are different from what they
-mean in SAS. See: \code{help(car::Anova)} for details.}
-
-\item{test.statistic}{Either 'F' or 'Chisq'.}
+\item{type}{Either 2 (default) or 3 (note that either roman or arabic
+numerals are acceptable). Type II tests each term after all other
+non-higher-order terms, whereas type III tests each term after all other
+terms, including higher-order terms.}
 
 \item{contr_sum}{Logical. Refit model using sum-to-zero contrasts? Default is
 \code{TRUE}.}
@@ -32,6 +25,6 @@ mean in SAS. See: \code{help(car::Anova)} for details.}
 a \code{\link{data.frame}}
 }
 \description{
-Performs F-test on coefficients of a model fit via glmmTMB using one of
-several available methods for calculating denomenator degrees of freedom
+Performs F-test on coefficients of a model fit via glmmTMB using one
+of several available methods for calculating denomenator degrees of freedom
 }

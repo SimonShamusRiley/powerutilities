@@ -327,22 +327,22 @@ aov_formula_writer <- function(model){
 
 #' Identify Exclusive terms used to identify levels of random slope and intercept variables
 #'
-#' @param model
-#' @param term
+#' @param model A \code{\link{glmmTMB}} model
+#' @param term  A model term
 #'
 #' @return a \code{\link{data.frame}}
 #' @keywords internal
 exclusive_terms<-function(model, term){
   y_name<- names(model$modelInfo$respCol)
   br <- best_rules(model)
-  temp <- suppressMessages(br %>% filter(slopeterm ==  !!sym(term), rules == "slope")) %>% arrange(interceptterm)
+  temp <- suppressMessages(br |> filter(slopeterm ==  !!sym(term), rules == "slope")) |> arrange(interceptterm)
   
   temp$length <- NA
   for(i in 1:nrow(temp)){
     temp$length[i] <- length(strsplit(temp$interceptterm[i], ":")[[1]])
   }
   
-  temp <- temp %>% arrange(length)
+  temp <- temp |> arrange(length)
   
   if(nrow(br) > 1){
     exclusive_terms <- c()

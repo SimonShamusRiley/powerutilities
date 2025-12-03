@@ -45,7 +45,7 @@ inner_outer_aov <- function(model = model, type = type){
   
   # Correctly identify random slope terms only involved in random effects
   #new addition for random slope rules (not sure if this is correct)
-  #need to update Inner_outter if it is
+  #need to update Inner_outer if it is
   for(i in 1:nrow(random)) {
     rtrm <- strsplit(random$terms[i], ":")[[1]]
     
@@ -81,18 +81,18 @@ inner_outer_aov <- function(model = model, type = type){
           rtrm<-strsplit(random$terms[j], ":")[[1]]
           
           #new addition for random slope rules (not sure if this is correct)
-          #need to update Inner_outter if it is
+          #need to update Inner_outer if it is
           #also see line 47
           rand_rules <- random$rules[j]
           
           if(rtrm[1] != "Residuals" && (rand_rules != "slope" || is.na(rand_rules))){
             
             if(length(rtrm) == 1 && length(ftrm) == 1){
-              temp<-suppressMessages(model$frame %>% select(rtrm, ftrm) %>% group_by(!!sym(rtrm)) %>% summarise(count = n_distinct(!!sym(ftrm), na.rm = TRUE)))
+              temp<-suppressMessages(model$frame |> dplyr::select(rtrm, ftrm) |> group_by(!!sym(rtrm)) |> summarise(count = n_distinct(!!sym(ftrm), na.rm = TRUE)))
             } else if(length(ftrm) > 1) {
-              temp<-suppressMessages(model$frame %>% select(rtrm, ftrm) %>% group_by_at(rtrm) %>% summarise(count = n_distinct(ftrm, na.rm = TRUE)))
+              temp<-suppressMessages(model$frame |> dplyr::select(rtrm, ftrm) |> group_by_at(rtrm) |> summarise(count = n_distinct(ftrm, na.rm = TRUE)))
             } else {
-              temp<-suppressMessages(model$frame %>% select(rtrm, ftrm) %>% group_by_at(rtrm) %>% summarise(count = n_distinct(!!sym(ftrm), na.rm = TRUE)))
+              temp<-suppressMessages(model$frame |> dplyr::select(rtrm, ftrm) |> group_by_at(rtrm) |> summarise(count = n_distinct(!!sym(ftrm), na.rm = TRUE)))
             }
             
             # Check to see if we have all 1s
@@ -144,7 +144,7 @@ inner_outer_aov <- function(model = model, type = type){
       na_terms <- df_output2[is.na(df_output2$df), "terms"]
       
       rules$both <- paste(rules$slopeterm, rules$interceptterm, sep = ":")
-      manual_terms <- rules %>% select(slopeterm, interceptterm, rules, both) %>% filter(both == na_terms)
+      manual_terms <- rules |> select(slopeterm, interceptterm, rules, both) |> filter(both == na_terms)
       
       df_vec = c()
       for(i in 1:nrow(manual_terms)){
@@ -167,7 +167,7 @@ inner_outer_aov <- function(model = model, type = type){
   
   #Next find the correct DF for each fixed effect term
   rules_ready <- data.frame(terms = row.names(TMBaov))
-  rules2 <- rules %>% select(terms, rules) %>% distinct()
+  rules2 <- rules |> select(terms, rules) |> distinct()
   rules2 <- left_join(rules_ready, rules2, by="terms")
   
   if(is.na(rules2$rules[1])){
@@ -191,7 +191,7 @@ inner_outer_aov <- function(model = model, type = type){
           inter_vec <- strsplit(df_output2$terms[j], ":")[[1]]
           
           if(term %in% inter_vec){
-            both <- rules %>% select(slopeterm, interceptterm) %>% filter(slopeterm == term)
+            both <- rules |> select(slopeterm, interceptterm) |> filter(slopeterm == term)
             
             for(k in 1:nrow(both)){
               both_vec <- strsplit(both$interceptterm[k], ":")[[1]]

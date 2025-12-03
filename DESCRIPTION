@@ -7,8 +7,10 @@ Description: This package contains tools for power analysis using glmmTMB.
 imports: 
   dplyr
   car
-suggests:
   glmmTMB
+  lme4
+  emmeans
+suggests:
 License: None, at present
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

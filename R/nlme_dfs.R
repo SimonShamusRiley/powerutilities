@@ -41,11 +41,11 @@ nlme_aov <- function(model = model, type = type){
         if(rtrm[1] != "Residuals"){
           
           if(length(rtrm) == 1 && length(ftrm) == 1){
-            temp<-suppressMessages(model$frame %>% select(rtrm, ftrm) %>% group_by(!!sym(rtrm)) %>% summarise(count = n_distinct(!!sym(ftrm), na.rm = TRUE)))
+            temp<-suppressMessages(model$frame |> select(rtrm, ftrm) |> group_by(!!sym(rtrm)) |> summarise(count = n_distinct(!!sym(ftrm), na.rm = TRUE)))
           } else if(length(ftrm) > 1) {
-            temp<-suppressMessages(model$frame %>% select(rtrm, ftrm) %>% group_by_at(rtrm) %>% summarise(count = n_distinct(ftrm, na.rm = TRUE)))
+            temp<-suppressMessages(model$frame |> select(rtrm, ftrm) |> group_by_at(rtrm) |> summarise(count = n_distinct(ftrm, na.rm = TRUE)))
           } else {
-            temp<-suppressMessages(model$frame %>% select(rtrm, ftrm) %>% group_by_at(rtrm) %>% summarise(count = n_distinct(!!sym(ftrm), na.rm = TRUE)))
+            temp<-suppressMessages(model$frame |> select(rtrm, ftrm) |> group_by_at(rtrm) |> summarise(count = n_distinct(!!sym(ftrm), na.rm = TRUE)))
           }
           
           # Check to see if we have all 1s

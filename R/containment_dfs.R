@@ -133,7 +133,7 @@ containment_aov <- function(model = model, type = type){
       na_terms <- df_output2[is.na(df_output2$df), "terms"]
       
       rules$both <- paste(rules$slopeterm, rules$interceptterm, sep = ":")
-      manual_terms <- rules %>% select(slopeterm, interceptterm, rules, both) %>% filter(both == na_terms)
+      manual_terms <- rules |> select(slopeterm, interceptterm, rules, both) |> filter(both == na_terms)
       
       df_vec = c()
       for(i in 1:nrow(manual_terms)){
@@ -156,7 +156,7 @@ containment_aov <- function(model = model, type = type){
   
   # Next find the correct DF for each fixed effect term
   rules_ready <- data.frame(terms = row.names(TMBaov))
-  rules2 <- rules %>% select(terms, rules) %>% distinct()
+  rules2 <- rules |> select(terms, rules) |> distinct()
   rules2 <- dplyr::left_join(rules_ready, rules2, by="terms")
   
   if(is.na(rules2$rules[1])){
@@ -182,7 +182,7 @@ containment_aov <- function(model = model, type = type){
           inter_vec <- strsplit(df_output2$terms[j], ":")[[1]]
           
           if(term %in% inter_vec){
-            both <- rules %>% select(slopeterm, interceptterm) %>% filter(slopeterm == term)
+            both <- rules |> select(slopeterm, interceptterm) |> filter(slopeterm == term)
             
             for(k in 1:nrow(both)){
               both_vec <- strsplit(both$interceptterm[k], ":")[[1]]
