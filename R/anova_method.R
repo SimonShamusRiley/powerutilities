@@ -24,7 +24,7 @@ anova.glmmTMB <- function(model, method = "containment", type = 2, contr_sum = T
     on.exit(options(current_contrast_settings))
   }
   
-  if (length(ranef(model)$cond) == 1 & method != 'residual'){
+  if (length(ranef(model)$cond) == 0 & !(method %in% c('residual', 'asymptotic'))){
     method = 'residual'
     warning('No random effects are present in the model: switching to residual degrees of freedom')
   }
