@@ -7,11 +7,10 @@ Description: This package contains tools for power analysis using glmmTMB.
 Depends: 
   R (>= 4.1.0)
 imports: 
-  dplyr
-  car
-  glmmTMB
-  lme4
+  dofcalcs
   emmeans
+remotes:
+  SimonShamusRiley/dofcalcs
 suggests:
 License: None, at present
 Encoding: UTF-8

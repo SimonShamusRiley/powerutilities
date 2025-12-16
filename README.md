@@ -24,10 +24,8 @@ power.
 In the course of such investigations, it's important that an appropriate choice
 of (approximate) denominator degrees of freedom be used, but unfortunately the
 `glmmTMB` package - among the only R packages which enables fitting of GLMMs will
-fixing parameter values - defaults to the use of infinite degrees of freedom (
-asymptotic results, equivalent to using a $\chi^2$ and normal distributions for
-omnibus tests and contrasts, respectively, instead of F- and t-distributions). 
-Much of the code for degree of freedom calculations whas written by [Josh Price](https://github.com/jprice80/lmmaov).
+fixing parameter values - defaults to the use of infinite degrees of freedom 
+(Wald tests; asymptotic results). 
 
 ## Installation
 

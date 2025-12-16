@@ -16,8 +16,6 @@
 #' @importFrom glmmTMB glmmTMB
 #' @exportS3Method anova glmmTMB
 anova.glmmTMB <- function(model, method = "containment", type = 2, contr_sum = TRUE){
-  
-  #TODO: check to see if this makes a difference
   if (contr_sum == TRUE){
     current_contrast_settings <- options("contrasts")
     options(contrasts = c("contr.sum", "contr.poly"))
