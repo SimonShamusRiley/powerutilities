@@ -50,6 +50,6 @@ power_contrast = function(emm, contr_list, ddf, alpha = 0.05){
                   F_crit = qf(1-alpha, numDF, denDF, 0),
                   power = 1-pf(F_crit, numDF, denDF, ncp = nc_param)) |> 
     dplyr::rename(pvalue = p.value) |> 
-    dplyr::select(contrast, numDF, denDF, alpha, Fvalue, pvalue, 
+    dplyr::select(contrast:estimate, numDF, denDF, alpha, Fvalue, pvalue, 
                   nc_param, F_crit, power)
 }
