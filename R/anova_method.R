@@ -36,15 +36,15 @@ anova.glmmTMB <- function(model, method = "containment", type = 2, contr_sum = T
   }
   
    if(method == "pinheiro-bates") {
-      aov_out <- nlme_aov(model, type)
+      aov_out <- dofcalcs::nlme_aov(model, type)
     } else if (method == "asymptotic") {
-      aov_out <- asymptotic_aov(model, type)
+      aov_out <- dofcalcs::asymptotic_aov(model, type)
     } else if (method == "containment") {
-      aov_out <- containment_aov(model, type)
+      aov_out <- dofcalcs::containment_aov(model, type)
     } else if (method == 'satterthwaite'){
-      aov_out <- satterthwaite_aov(model, type)
+      aov_out <- dofcalcs::satterthwaite_aov(model, type)
     } else if (method == 'residual') {
-      aov_out <- residual_aov(model, type)
+      aov_out <- dofcalcs::residual_aov(model, type)
     } else {  
       stop ("Only containment, pinheiro-bates, satterthwaite, residual, and asymptotic methods are supported at this time")
     }

@@ -4,11 +4,9 @@ Version: 0.0.0.1
 Authors@R: 
     person("Simon", "Riley", , "ssr@agro.au.dk", role = c("aut", "cre"))
 Description: This package contains tools for power analysis using glmmTMB.
-Depends: 
-  R (>= 4.1.0),
-  dofcalcs
-  emmeans
-remotes:
+Depends: R (>= 4.1.0), dofcalcs
+Imports: dplyr, tibble, emmeans, car, lme4, glmmTMB
+Remotes:
   github::SimonShamusRiley/dofcalcs
 suggests:
 License: None, at present

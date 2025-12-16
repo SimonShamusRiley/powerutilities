@@ -17,10 +17,10 @@ power_ftest = function(mod, ddf = 'containment', type = 2, alpha = 0.05) {
   
   anova(mod, method = ddf, type = type) |> 
     tibble::rownames_to_column(var = 'factor') |> 
-    mutate(alpha = alpha, 
-           nc_param = Fvalue*numDF, 
-           F_crit = qf(1-alpha, numDF, denDF, 0),
-           power = 1-pf(F_crit, numDF, denDF, ncp = nc_param)) |> 
+    dplyr::mutate(alpha = alpha, 
+                  nc_param = Fvalue*numDF, 
+                  F_crit = qf(1-alpha, numDF, denDF, 0),
+                  power = 1-pf(F_crit, numDF, denDF, ncp = nc_param)) |> 
     dplyr::select(factor, numDF, denDF, alpha, Fvalue, pvalue, 
                   nc_param, F_crit, power)
   
@@ -42,13 +42,13 @@ power_ftest = function(mod, ddf = 'containment', type = 2, alpha = 0.05) {
 power_contrast = function(emm, contr_list, ddf, alpha = 0.05){
   emmeans::contrast(emm, contr_list, df = ddf) |> 
     as.data.frame() |>
-    mutate(numDF = 1, 
-           denDF = df, 
-           Fvalue = t.ratio^2, 
-           nc_param = Fvalue*numDF, 
-           alpha = alpha, 
-           F_crit = qf(1-alpha, numDF, denDF, 0),
-           power = 1-pf(F_crit, numDF, denDF, ncp = nc_param)) |> 
+    dplyr::mutate(numDF = 1, 
+                  denDF = df, 
+                  Fvalue = t.ratio^2, 
+                  nc_param = Fvalue*numDF, 
+                  alpha = alpha, 
+                  F_crit = qf(1-alpha, numDF, denDF, 0),
+                  power = 1-pf(F_crit, numDF, denDF, ncp = nc_param)) |> 
     dplyr::rename(pvalue = p.value) |> 
     dplyr::select(contrast, numDF, denDF, alpha, Fvalue, pvalue, 
                   nc_param, F_crit, power)
