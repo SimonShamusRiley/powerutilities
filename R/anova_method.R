@@ -42,7 +42,8 @@ anova.glmmTMB <- function(model, method = "containment", type = 2, contr_sum = T
     } else if (method == "containment") {
       aov_out <- dofcalcs::containment_aov(model, type)
     } else if (method == 'satterthwaite'){
-      aov_out <- dofcalcs::satterthwaite_aov(model, type)
+      warning('Satterthwaite DFs not yet implemented - using residual DFs')
+      aov_out <- dofcalcs::residual_aov(model, type) #dofcalcs::satterthwaite_aov(model, type)
     } else if (method == 'residual') {
       aov_out <- dofcalcs::residual_aov(model, type)
     } else {  
