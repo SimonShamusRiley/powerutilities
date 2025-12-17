@@ -42,7 +42,7 @@ power_ftest = function(mod, ddf = 'containment', type = 2, alpha = 0.05) {
 power_contrast = function(emm, contr_list, ddf, alpha = 0.05){
   emmeans::contrast(emm, contr_list, df = ddf) |> 
     as.data.frame() |> 
-    rename_with(~ "t.ratio", .cols = any_of("z.ratio")) |> 
+    rename_with(~ if_else(. == "z.ratio", "t.ratio", .), .cols = everything()) |> 
     dplyr::mutate(numDF = 1, 
                   denDF = df, 
                   Fvalue = t.ratio^2, 
