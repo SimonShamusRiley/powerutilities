@@ -1,8 +1,8 @@
 ---
-title: "glmm-powerutilities"
+title: "Power and Planning for Generalized Linear Mixed Models"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{glmm-powerutilities}
+  %\VignetteIndexEntry{Power and Planning for Generalized Linear Mixed Models}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

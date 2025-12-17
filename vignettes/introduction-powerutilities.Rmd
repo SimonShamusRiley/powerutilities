@@ -2,7 +2,7 @@
 title: 'Introduction to the "Plug-In" Method of Power Analysis in R'
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{introduction-powerutilities}
+  %\VignetteIndexEntry{Introduction to the "Plug-In" Method of Power Analysis in R}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
