@@ -1,0 +1,163 @@
+---
+title: "glmm-powerutilities"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{glmm-powerutilities}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Introduction
+
+This vignette assumes you have already familiarized yourself with the basic operations of the "plug-in" approach to power analyis and the `powerutilities` package. If you have not, please refer to the "introduction-powerutilities" vignette.
+
+# Housekeeping
+
+Load all required packages:
+
+```{r, warning=F, message=F}
+library(tidyverse)
+library(glmmTMB)
+library(powerutilities)
+library(emmeans)
+```
+
+# Example 1: A Randomized Complete Block Design and Binomial Data
+
+This example is inspired by the work of [Ataide et al (2025)](https://www.mdpi.com/2077-0472/15/13/1451). The hypothetical planned experiment is a 3x2 factorial of insecticide treatments (spinosad and sesame oil, along with a water control) and application method (prophylactic or curative). Plants are arranged in a randomized complete block design, and then thrips will be introduced into each plant to observe the mortality rate. For illustration purposes, lets imagine we have a total of 240 thrips and the question is whether to arrange them such that there are 4 blocks with 10 thrips on each plant or 8 blocks with 5 thrips on each plant. We start by creating our treatment dictionary containing all combinations of our treatments:
+
+```{r}
+ex3_trt_dict = expand.grid(Insecticide = c('Water', 'Spinosad', 'Sesame Oil'), 
+                           Application = c('Curative', 'Prophylactic'))
+ex3_trt_dict
+```
+
+We then assign mean response values (as proportions) to that treatment dictionary. We then create two separate data sets corresponding to our two proposed designs by merging the treatment dictionary to incorporate blocks and adding a column containing the total number of thrips on each plant:
+
+```{r}
+ex3_trt_dict$Mortality = c(.05, 0.20, 0.15, 
+                           .05, 0.35, 0.25) 
+
+ex3a = ex3_trt_dict |> 
+  merge(data.frame(Block = factor(1:4))) |> 
+  mutate(Ttl_Thrips = 10)
+
+ex3b = ex3_trt_dict |> 
+  merge(data.frame(Block = factor(1:8))) |> 
+  mutate(Ttl_Thrips = 5)
+```
+
+Now, note that as discrete proportions, we will model this as binomial data, and the binomial distribution has no dispersion parameter: the variance is equal to *kp(1-p)*, which means its entirely determined by the proportion parameter, *p*, and the number of trials, *k*. This would seem to simplify the process of power estimation, since we have 1 less "plug-in" value to determine. However, we now also have the issue of a link function (here, the logit), which complicates the issue of specifying a block variance, since this is the variance on the logit scale. Where an investigator is required to rely on educated guesswork to find an appropriate plug-in value, it is highly recommended they employ some simulation to get a feel for what the implications of different block (or other random effect) variances have on the original scale. Here, we'll simply take the block variance as 0.3 (again, on the logit scale).
+
+Fit the model to the data with fewer blocks and more thrips per plant:
+
+```{r}
+# A warning is produced about non-integer number of successes, but we 
+# can safely ignore this.
+ex3a_mod = glmmTMB(Mortality ~ Insecticide*Application + (1|Block), 
+                  data = ex3a, family = binomial(link = 'logit'), 
+                  weights = Ttl_Thrips, 
+                  start = list(theta = c(log(0.3))), 
+                  map = list(theta = factor(c(NA))))
+VarCorr(ex3a_mod)
+```
+
+Fit the same model to the data with more blocks and fewer thrips per plant:
+
+```{r}
+# A warning is produced about non-integer number of successes, but we 
+# can safely ignore this.
+ex3b_mod = glmmTMB(Mortality ~ Insecticide*Application + (1|Block), 
+                  data = ex3b, family = binomial(link = 'logit'), 
+                  weights = Ttl_Thrips, 
+                  start = list(theta = c(log(0.3))), 
+                  map = list(theta = factor(c(NA))))
+VarCorr(ex3a_mod)
+```
+
+Before proceeding any further with the power analysis, let's first examine the marginal means:
+
+```{r}
+emmeans(ex3a_mod, ~Insecticide:Application, type = 'response')
+```
+Why do these estimates not coincide with the ones we specified in the "treatment dictionary"? The answer lies in the fact that what we specified is *marginal* proportion, while what we are estimating in the *conditional* proportion. This distinction, and its implications for modeling and estimation, are both subtle and important. Unfortunately, they are beyond the scope of this current work. Interested readers (and you should all be interested) will find [Section 3.5 of Stroup, Ptukhina and Garai (2024)](https://www.taylorfrancis.com/chapters/mono/10.1201/9780429092060-4/setting-stage?context=ubx&refId=3b049c28-8737-47f7-b88a-f5b6ab094d14) an excellent jumping-off point for understanding this topic which does not arrise in either generalized linear mixed models or linear mixed models, but is distinct to general linearized mixed models.
+
+Now, turn to the power of the *F-*tests. First, we'll consider the calculated power when using asymptotic Wald tests. You will notice that the differences in power, which derive exclusively from the small variation in the estimated coefficients, are negligibly small. These Wald tests are the default when using `car::Anova()` or `emmeans::joint_tests`, but they are known to "anti-conservative", which means that they have a tendency to result in inflated type I error rates. 
+
+```{r}
+power_ftest(ex3a_mod, ddf = 'asymptotic')
+power_ftest(ex3b_mod, ddf = 'asymptotic')
+```
+Alternative approaches to calculating the degrees of freedom, in contrast, can lead to more pronounced differences in the power:
+
+**Residual DF:**
+
+```{r}
+pow_ex3a_res = power_ftest(ex3a_mod, ddf = 'residual') |> 
+  rename(ex3a_denDF = denDF, ex3a_power = power)|> 
+  select(factor, ex3a_denDF, ex3a_power)
+
+pow_ex3b_res = power_ftest(ex3b_mod, ddf = 'residual') |> 
+  rename(ex3b_denDF = denDF, ex3b_power = power) |> 
+  select(factor, ex3b_denDF, ex3b_power)
+
+left_join(pow_ex3a_res, 
+          pow_ex3b_res, 
+          by = join_by(factor))
+```
+**Containment DFs:**
+
+```{r}
+pow_ex3a_con = power_ftest(ex3a_mod, ddf = 'containment') |> 
+  rename(ex3a_denDF = denDF, ex3a_power = power)|> 
+  select(factor, ex3a_denDF, ex3a_power)
+
+pow_ex3b_con = power_ftest(ex3b_mod, ddf = 'containment') |> 
+  rename(ex3b_denDF = denDF, ex3b_power = power) |> 
+  select(factor, ex3b_denDF, ex3b_power)
+
+left_join(pow_ex3a_con, 
+          pow_ex3b_con, 
+          by = join_by(factor))
+```
+These differences might not be huge, but its important to be aware of them. The take-home message is that **Wald $\chi^2$-tests and, equivalently, F-test with Inf denominator degrees of freedom provide, at best, an upper limit for your statistical power and, during actual testing, your p-values.**
+
+Turning now to the contrasts, we start by calculating the marginal means for the models fit to each of our two candidate designs:
+
+```{r}
+(ex3a_emm = emmeans(ex3a_mod, ~Insecticide:Application, type = 'response'))
+```
+
+```{r}
+(ex3b_emm = emmeans(ex3b_mod, ~Insecticide:Application, type = 'response'))
+```
+
+Next, we will focus on two constrasts specifically, not because they are necessarily very interseting in the context of our hypothetical study but because they highlight an additional complication that arrises specifically for generalized linear models and generalized linear mixed models which are not present for normal data. 
+
+The key item to remember when considering these two contrasts is that the difference between the treatments being compared is the same for both contrasts: 0.1.
+
+```{r}
+ex3_contr_list = list('Sesame Curative - Control' = c(-1, 0, 1, 0, 0, 0), 
+                      'Sesame Prophylactic - Curative' = c(0, 0, -1, 0, 0, 1))
+```
+
+```{r}
+power_contrast(ex3a_emm, ex3_contr_list, ddf = 15)
+```
+
+```{r}
+power_contrast(ex3b_emm, ex3_contr_list, ddf = 35)
+```
+
+
+
+
+
+

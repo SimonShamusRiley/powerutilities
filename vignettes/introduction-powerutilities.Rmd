@@ -1,0 +1,232 @@
+---
+title: 'Introduction to the "Plug-In" Method of Power Analysis in R'
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{introduction-powerutilities}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Introduction
+
+Statistical power can be thought of as our ability to avoid inconclusive test results. As researchers, we want our studies to provide precise estimates and powerful tests. All else being equal, statistical power will be greater with:
+
+- Larger sample sizes
+- More efficient experimental designs
+- Lower residual dispersion (i.e., variation among experimental units treated alike)
+- Larger true difference in the parameters being compared
+
+Of these factors, the sample size and the experimental design are the two under the most direct control of the experimenter. Diligence and care in the conduct of the experiment can help reduce the residual dispersion to a degree, but some level of background noise is inevitable. And the true difference between the parameters being compared is, of course, entirely outside the control of the researcher. Thus, the focus during the planning stages is usually on determining the required sample size to achieve some pre-specified power level (given some experimental design), determining the power of a test based on the number of available replicates (again, assuming a particular experimental design), or determining which of several candidate designs will maximize the statistical power given some number of replicates. In all of these cases, the true magnitude of the difference and the magnitude of the residual variance is assumed known, usually being based on the results of a pilot study, on findings from previously published studies, or from educated guesswork.  
+
+For simple linear models, where the data are assumed independent and normally distributed and where the only random effect is the residual variance, there are fairly simple equations available for determining power or sample size requirements (for an excellent introduction and discussion of these equations, along with much, much else, see: [Piepho set al.,   2022](https://www.doi.org/10.1017/S0021859622000466) ). For linear mixed models (i.e., where the experimental design implies the presence of additional random effects, heteroscedasticity, or correlated residuals), or for generalized linear models (i.e., where the data are characterized by a distribution other than the normal), these calculations can become much more complex and the relationships among the different factors less simple and intuitive. For this reason, alternative approaches are needed for power analysis/sample size determination/design planning. 
+The origins of the approach to power analysis employed here, which [Piepho set al.,   2022](https://www.doi.org/10.1017/S0021859622000466) refers to as the "plug-in approach", are actually quite old, but a recent description (for its use in SAS) can be found in the last chapter of [Generalized Linear Mixed Models: Modern Concepts and Methods](https://doi.org/10.1201/9780429092060). It has the advantages of being very general, capable of accommodating a wide variety of designs/models, while remaining simpler to implement and less computationally demanding than simulation-based power analysis. The basic idea is to first encode information about sample size and expected treatments means (and differences) for the proposed experiment in a fake data set, to then specify a model encoding information about the design of the proposed experiment, and finally to "fit" the model while fixing ("plugging in") the values for the random effects and dispersion parameters. The result is that the modelling software does all the work of calculating the required standard errors which are needed to derive the power of the tests under the hypothetical conditions defined by our fake data and proposed model. By manipulating the fake data set, model, or variance parameter values, it becomes possible to explore how differences in sample size, effect size, experimental design, or random effects will impact statistical power. In R, the `glmmTMB` package allows one to fix parameter estimates during model fitting, making it the perfect tool for this sort of power analysis. 
+
+# Housekeeping
+
+If you have not yet done so already, the `powerutilities` package must be installed from Github (this only needs to be done once, unless you have updated R itself, or you want to update the package):
+
+```{r, eval = FALSE}
+install.packages('devtools')
+devtools::install_github('SimonShamusRiley/powerutilities', force = T)
+```
+
+Then load it along with all of the other required packages:
+
+```{r, warning=F, message=F}
+library(tidyverse)
+library(glmmTMB)
+library(powerutilities)
+library(emmeans)
+```
+
+
+# Example 1: A two-sample t-test
+
+To begin, lets consider the simplest example, in which we will establish an single factor experiment with two levels ('A' and 'B') arranged in a completely randomized design (CRD) with 8 replicates per treatment. Under these circumstances, we can actually skip the modeling stage and simply perform a two-sample t-test on this data, and for that we have tools in base R for performing power analysis. By simply leaving one of the arguments the set `n`, `delta`, `sd`, sig.level` and `power` to the value `NULL`,  that value will be calculated on the basis of the other arguments provided. Thus, if we assume a residual standard deviation of 1.5 and a difference in treatment means of 3, then our power is 0.96 (which is excellent).
+
+```{r}
+power.t.test(n = 8, delta = 3, sd = 1.5, sig.level = 0.05, power = NULL, 
+             type = 'two.sample', alternative = 'two.sided')
+```
+
+We can also use the alternative "plug-in" approach, by creating a fake data set and "fitting" the model using a fixed value for the residual standard deviation. The first step is to create a data set with the correct number of rows with treatment "A" and "B", thereby encoding the proposed sample size. Then, the response value, `Y`, is set such that the difference between the treatments is 3 (the actual values are unimportant here, although that will not always be true):
+
+```{r}
+nrep = 8 # Number of replicates
+nfac = 2 # Number of treatments
+
+# Expand grid creates a data set with all combinations of treatments
+ex1 = expand.grid(Rep = factor(1:nrep),
+                  Trt = factor(LETTERS[1:nfac])) |> 
+  data.frame()
+
+# Set the response values to correspond to the expected treatment differences
+ex1$Y = ifelse(ex1$Trt == 'A', 0, 3)
+head(ex1)
+```
+
+Now, we fit the model, but while fixing the residual standard deviation to 1.5 using the trick shown below, which entails two arguments, `dispformula` and `control`:
+
+```{r}
+ex1_mod = glmmTMB(Y ~ Trt, data = ex1, 
+                  dispformula = ~ 0,    # Set dispersion to "zero"...
+                  family = gaussian(),
+                  REML = T,
+                  # ... and then define what value to use for "zero",
+                  # expressed on the log scale:
+                  control = glmmTMBControl(zerodisp_val = log(1.5)))
+
+# Confirm the trick worked:
+sigma(ex1_mod)
+```
+
+On the basis of those results, we can calculate power of the F-test (i.e., ANOVA table) using the `power_ftest` function from the `powerutilities` package: 
+
+```{r}
+power_ftest(ex1_mod, ddf = 'residual')
+```
+
+Note first, that the power calculated here is identical to the one we got from the `power.t.test()` function. Also note that we had to set the `ddf` argument to "residual". We will return to this issue of denominator degrees of freedom later, but for now simply note that there are other choices, and the choice of how to calculate denominator DF will impact the results:
+
+```{r}
+power_ftest(ex1_mod, ddf = 'asymptotic')
+```
+
+In addition to the F-test, we are probably also interested in assessing the power of specific contrasts. To do this, we first need to calculate the estimated marginal means for the factor levels we want to compare:
+
+```{r}
+(emm = emmeans(ex1_mod, ~Trt))               # Estimated treatment means
+```
+
+We then define our contrasts of interest as a named list, each item of which is a vector of weights. Full treatment of how to define contrasts in R is beyond the scope of this work, but for now suffice to say that a valid class contrasts consist of positive and negative weights, which should all sum to +1 and -1, respectively, and which are ordered to match the output of the call to `emmeans`. Thus, for this example where there is only one possible contrast, we would test for a difference between treatments A and B as follows:
+
+```{r}
+contr_list = list('Trt A - Trt B' = c(1, -1))
+```
+
+And then use the `power_contrast` function from `powerutilities` to calculate the power of that test, again assuming the proposed study matched the fake model and data we defined earlier:
+
+```{r}
+power_contrast(emm, contr_list, ddf = 14)
+```
+
+Note that here, again, we needed to define the denominator degrees of freedom, but this time as a numeric value (taken from the output of the call to `power_ftest`). Also note that for a comparison of two groups, the F-statistic is simply the square of the t-statistic, meaning that we can use F-tests both for the ANOVA above (which will work for factors with any number of levels) and for the contrast here (where we are only comparing two means or two groups of means at a time). Naturally, for a factor containing only two levels, the results of the two tests are identical.
+
+We've now seen that for this simple example the "plug-in" method produces the same results as the basic power equations do. However, this "plug-in" approach will also work for basically any design or model we can think of. 
+
+# Example 2: A Split-Plot Randomized Complete Block Design
+
+We are basing this proposed experiment on the one described in Frank Yates' 1935 paper entitled "Complex experiments" (https://doi.org/10.2307/2983638), which was structured as a randomized complete block design (RCBD) with six blocks, a main-plot factor of genotype with three levels ('Marvellous', 'Victory' and 'GoldenRain'), and a sub-plot factor of nitrogen application rate, at 4 levels (0, 20, 40, 60 kg/ha). Let's imagine that at zero nitrogen fertilization, we expect Victory and Golden Rain to yield 1400 and Marvellous to yield 1500. Meanwhile, you expect increases of 150 kg/ha at each higher level of N, except for Victory, which you expect to gain 200 kg/ha for each additional increase in N. Finally, you expect similar standard deviation among blocks, mainplots, and the residual error of around 250, 200 and 250, respectively. 
+
+The first step is to create the frame of the dataset by using expand.grid to create all combinations of the two factor levels:
+
+```{r}
+ex2_trt_dict = expand.grid(gen = c('GoldenRain', 'Marvellous', 'Victory'), 
+                           nitro = factor(c(0, 20, 40, 60))) |> 
+  arrange(gen)
+ex2_trt_dict
+```
+
+The, the expected mean response values need to be added in. This is the most tedious part of the "plug-in" process, but if you keep yourself organized, doesn't need to be too bad. Here, I've kept my treatments arranged in an organized manner, and am entering the expected treatment means as formulae, so that I can more easily see/compare my written expectations with the actual values:
+
+```{r}
+ex2_trt_dict$yield = c(1400 + 150*0, 
+                       1400 + 150*1, 
+                       1400 + 150*2, 
+                       1400 + 150*3, 
+                       1500 + 150*0, 
+                       1500 + 150*1, 
+                       1500 + 150*2, 
+                       1500 + 150*3, 
+                       1400 + 200*0, 
+                       1400 + 200*1, 
+                       1400 + 200*2, 
+                       1400 + 200*3)
+ex2_trt_dict 
+```
+
+I then merge this information with a data set defining the block IDs. This merging ensures the fake data set contains all combinations of all factor levels for each block ID:
+
+```{r}
+nblk = 6
+ex2 = ex2_trt_dict |>
+  merge(data.frame(block = factor(1:nblk)))
+
+str(ex2)
+```
+
+I can now fit the model. First, note that the same trick as previously is used to fix the value of the residual standard deviation. But here we also have two random effects standard deviations to incorporate as well, and that requires a different trick: we set starting values (using the `start` argument) and then fix those values using the `map` argument. For the map argument, it should be a list of factors ("theta" values corresponding to random effects) where each value set to `NA` will not be estimated, but kept at its starting value. Here, we want both of the two "theta" parameters to be fixed, so the we have `map = list(theta = factor(c(NA, NA)))`:
+
+```{r}
+ex2_mod = glmmTMB(yield ~ gen*nitro + (1|block/gen), data = ex2, 
+                  family = gaussian(link = 'identity'), REML = T,
+                  dispformula = ~ 0,
+                  # Set starting values for the "theta" (RE) parameters:
+                  start = list(theta = c(log(200), log(250))), 
+                  # Then disable estimation of those theta parameters,
+                  # so they stay fixed at their starting values:
+                  map = list(theta = factor(c(NA, NA))), 
+                  control = glmmTMBControl(zerodisp_val = log(250)))
+VarCorr(ex2_mod) # It worked
+```
+
+And we can now assess the power of the F-tests associated with our proposed study. Here, however, we set denominator degrees of freedom to 'containment', which is appropriate for cases of a  balanced (or nearly balanced) experimental design entailing splits or strips. We can see that we have very high power for detecting effect of nitrogen, but very low power for detecting either the main effect of genotype and for the genotype:nitro interaction.
+
+```{r}
+power_ftest(ex2_mod, ddf = 'containment')
+```
+
+For the sake of illustration, let us imagine that Victory is something of a "standard" cultivar which we want to use as a reference or control. Let us suppose then that we are interested in comparing the performance of Golden Rain and Marvellous against the performance of Victory separately at each nitrogen level. To do this, we first calculate our marginal means for each genotype while using nitro as a grouping variable (via the "|" operator):
+
+```{r}
+(ex2_emm1 = emmeans(ex2_mod, ~ gen|nitro))
+```
+
+We can then define our contrasts only in terms of genotype, and these contrasts are then automatically applied to each level of the grouping factor:
+
+```{r}
+ex2_contr1 = list('Golden - Victory' = c(1, 0, -1), 
+                  'Marvellous - Victory' = c(0, 1, -1))
+```
+
+First, we can see that where the true difference is zero, we have power of 0.05, which makes sense, since this is the false positive rate alpha! However, we can also see that a true difference of only 100kg/ha, given the magnitude of the variation among plots, blocks, etc., is very low at just above 0.08. Even more concerning, note that even for the pairwise comparison with the greatest difference (Golden - Victory @ 60 nitro) the power is still very low, at only about 12.5%. If such comparisons were the primary objectives of the study and we had no way to increase the sample size, we would be forced to seriously consider whether such an experiment was worth the investment.
+
+```{r}
+power_contrast(ex2_emm1, ex2_contr1, ddf = 45)
+```
+
+Finally, for this example, we can see the tremendous flexability afforded by being able to calculate the power for any contrast we might wish to specify. Imagine, for example, we want to formally compare the slope of the nitrogen efffect in the Victoria and Golden Rain cultivars. First, we calculate the marginal means for all nitrogen and genotype combinations:
+
+```{r}
+(ex2_emm2 = emmeans(ex2_mod, ~ nitro:gen))
+```
+
+We can then use the `poly()` function to calculate the appropriate coefficients for polynomial contrasts (here we'll only consider differences in the linear trend, but we could fairly easily use the same approach to test for differences in quadratic and higher order trends):
+
+```{r}
+poly(c(0, 0.2, 0.4, 0.6), degree = 1)[, 1]
+```
+With a bit of algebra, we use these to work out the coefficients corresponding to the differences between the two slopes, and arrive at:
+
+```{r}
+ex2_contr2 = list('Slope Vic - Slope Golden' = c(+0.671, +0.224, -0.224, -0.671, 0, 0, 0, 0, -0.671, -0.224, +0.224, +0.671))
+```
+
+And we now have the power for a test of the difference in these two slopes:
+
+```{r}
+power_contrast(ex2_emm2, ex2_contr2, ddf = 45)
+```
+
+For those interested in learning more about the use of polynomial and other types of contrasts, I strongly recommend the articles by Pearce entitled "Data Analysis in Agricultural Experimentation" [Part I: Contrasts of Interest](https://www.doi.org/10.1017/S0014479700019840), [Part II: Some Standard Contrasts](https://www.doi.org/10.1017/S0014479700020081), and [Part III: Multiple Comparisons](https://www.doi.org/10.1017/S0014479700020354). 
+
+An additional vignette focused on the specification and use of contrasts in R will, hopefully, be forthcoming soon.
+
+
