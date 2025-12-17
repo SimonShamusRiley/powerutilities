@@ -40,8 +40,9 @@ power_ftest = function(mod, ddf = 'containment', type = 2, alpha = 0.05) {
 #' @param alpha The nominal type I error rate. Defaults to 0.05.
 #' @export
 power_contrast = function(emm, contr_list, ddf, alpha = 0.05){
-  emmeans::contrast(emm, contr_list, df = ddf) |> 
-    as.data.frame() |>
+  emm = emmeans::contrast(emm, contr_list, df = ddf) |> 
+    as.data.frame() 
+    rename(any_of(c(t.ratio = "z.ratio"))) |> 
     dplyr::mutate(numDF = 1, 
                   denDF = df, 
                   Fvalue = t.ratio^2, 
