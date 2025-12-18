@@ -1,13 +1,18 @@
 ---
 title: 'Introduction to the "Plug-In" Method of Power Analysis in R'
 output: 
-  rmarkdown::html_vignette:
-    css: custom_styling.css
+  rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Introduction to the "Plug-In" Method of Power Analysis in R}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
+
+```{css, echo=FALSE}
+body {
+  font-size: 16px;
+}
+```
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
