@@ -11,7 +11,7 @@ vignette: >
 
 ```{css, echo=FALSE}
 body {
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1.15;
 }
 ```
