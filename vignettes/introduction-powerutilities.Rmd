@@ -3,7 +3,7 @@ title: 'Introduction to the "Plug-In" Method of Power Analysis in R'
 output: 
   rmarkdown::html_vignette:
     toc: yes
-    code-overflow: scroll
+    df_print: kable
 vignette: >
   %\VignetteIndexEntry{Introduction to the "Plug-In" Method of Power Analysis in R}
   %\VignetteEngine{knitr::rmarkdown}
@@ -19,8 +19,8 @@ body {
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
-  collapse = FALSE,
-  comment = "#>"
+  collapse = FALSE, 
+  comment = '#>'
 )
 ```
 

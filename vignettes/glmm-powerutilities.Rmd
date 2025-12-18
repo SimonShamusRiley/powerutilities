@@ -3,6 +3,7 @@ title: "Power and Planning for Generalized Linear Mixed Models"
 output: 
   rmarkdown::html_vignette:
     toc: yes
+    df_print: kable
 vignette: >
   %\VignetteIndexEntry{Power and Planning for Generalized Linear Mixed Models}
   %\VignetteEngine{knitr::rmarkdown}
