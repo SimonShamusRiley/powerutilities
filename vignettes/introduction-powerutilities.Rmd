@@ -1,7 +1,8 @@
 ---
 title: 'Introduction to the "Plug-In" Method of Power Analysis in R'
 output: 
-  rmarkdown::html_vignette
+  rmarkdown::html_vignette:
+    toc: yes
 vignette: >
   %\VignetteIndexEntry{Introduction to the "Plug-In" Method of Power Analysis in R}
   %\VignetteEngine{knitr::rmarkdown}
@@ -11,6 +12,7 @@ vignette: >
 ```{css, echo=FALSE}
 body {
   font-size: 16px;
+  line-height: 1.15;
 }
 ```
 
@@ -41,7 +43,8 @@ If you have not yet done so already, the `powerutilities` package must be instal
 
 ```{r, eval = FALSE}
 install.packages('devtools')
-devtools::install_github('SimonShamusRiley/powerutilities', force = T)
+devtools::install_github('SimonShamusRiley/powerutilities', force = T, 
+                         build_vignettes = TRUE, dependencies = TRUE)
 ```
 
 Then load it along with all of the other required packages:
@@ -56,7 +59,7 @@ library(emmeans)
 
 # Example 1: A two-sample t-test
 
-To begin, lets consider the simplest example, in which we will establish an single factor experiment with two levels ('A' and 'B') arranged in a completely randomized design (CRD) with 8 replicates per treatment. Under these circumstances, we can actually skip the modeling stage and simply perform a two-sample t-test on this data, and for that we have tools in base R for performing power analysis. By simply leaving one of the arguments the set `n`, `delta`, `sd`, sig.level` and `power` to the value `NULL`,  that value will be calculated on the basis of the other arguments provided. Thus, if we assume a residual standard deviation of 1.5 and a difference in treatment means of 3, then our power is 0.96 (which is excellent).
+To begin, lets consider the simplest example, in which we will establish an single factor experiment with two levels ('A' and 'B') arranged in a completely randomized design (CRD) with 8 replicates per treatment. Under these circumstances, we can actually skip the modeling stage and simply perform a two-sample t-test on this data, and for that we have tools in base R for performing power analysis. By simply leaving one of the arguments the set `n`, `delta`, `sd`, `sig.level` and `power` to the value `NULL`,  that value will be calculated on the basis of the other arguments provided. Thus, if we assume a residual standard deviation of 1.5 and a difference in treatment means of 3, then our power is 0.96 (which is excellent).
 
 ```{r}
 power.t.test(n = 8, delta = 3, sd = 1.5, sig.level = 0.05, power = NULL, 
