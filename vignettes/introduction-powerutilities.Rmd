@@ -26,7 +26,7 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-Statistical power can be thought of as our ability to avoid inconclusive test results. As researchers, we want our studies to provide precise estimates and powerful tests. All else being equal, statistical power will be greater with:
+Loosely speaking, statistical power can be thought of as our capacity to avoid inconclusive test results. As researchers, we want our studies to provide precise estimates and powerful tests. All else being equal, statistical power will be greater with:
 
 - Larger sample sizes
 - More efficient experimental designs
@@ -35,8 +35,8 @@ Statistical power can be thought of as our ability to avoid inconclusive test re
 
 Of these factors, the sample size and the experimental design are the two under the most direct control of the experimenter. Diligence and care in the conduct of the experiment can help reduce the residual dispersion to a degree, but some level of background noise is inevitable. And the true difference between the parameters being compared is, of course, entirely outside the control of the researcher. Thus, the focus during the planning stages is usually on determining the required sample size to achieve some pre-specified power level (given some experimental design), determining the power of a test based on the number of available replicates (again, assuming a particular experimental design), or determining which of several candidate designs will maximize the statistical power given some number of replicates. In all of these cases, the true magnitude of the difference and the magnitude of the residual variance is assumed known, usually being based on the results of a pilot study, on findings from previously published studies, or from educated guesswork.  
 
-For simple linear models, where the data are assumed independent and normally distributed and where the only random effect is the residual variance, there are fairly simple equations available for determining power or sample size requirements (for an excellent introduction and discussion of these equations, along with much, much else, see: [Piepho set al.,   2022](https://www.doi.org/10.1017/S0021859622000466) ). For linear mixed models (i.e., where the experimental design implies the presence of additional random effects, heteroscedasticity, or correlated residuals), or for generalized linear models (i.e., where the data are characterized by a distribution other than the normal), these calculations can become much more complex and the relationships among the different factors less simple and intuitive. For this reason, alternative approaches are needed for power analysis/sample size determination/design planning. 
-The origins of the approach to power analysis employed here, which [Piepho set al.,   2022](https://www.doi.org/10.1017/S0021859622000466) refers to as the "plug-in approach", are actually quite old, but a recent description (for its use in SAS) can be found in the last chapter of [Generalized Linear Mixed Models: Modern Concepts and Methods](https://doi.org/10.1201/9780429092060). It has the advantages of being very general, capable of accommodating a wide variety of designs/models, while remaining simpler to implement and less computationally demanding than simulation-based power analysis. The basic idea is to first encode information about sample size and expected treatments means (and differences) for the proposed experiment in a fake data set, to then specify a model encoding information about the design of the proposed experiment, and finally to "fit" the model while fixing ("plugging in") the values for the random effects and dispersion parameters. The result is that the modelling software does all the work of calculating the required standard errors which are needed to derive the power of the tests under the hypothetical conditions defined by our fake data and proposed model. By manipulating the fake data set, model, or variance parameter values, it becomes possible to explore how differences in sample size, effect size, experimental design, or random effects will impact statistical power. In R, the `glmmTMB` package allows one to fix parameter estimates during model fitting, making it the perfect tool for this sort of power analysis. 
+For simple linear models, where the data are assumed independent and normally distributed and where the only random effect is the residual variance, there are fairly simple equations available for determining power or sample size requirements (for an excellent introduction and discussion of these equations, along with much, much else, see: [Piepho et al.,   2022](https://www.doi.org/10.1017/S0021859622000466) ). For linear mixed models (i.e., where the experimental design implies the presence of additional random effects, heteroscedasticity, or correlated residuals), or for generalized linear models (i.e., where the data are characterized by a distribution other than the normal), these calculations can become much more complex and the relationships among the different factors less simple and intuitive. For this reason, alternative approaches are needed for power analysis/sample size determination/design planning. 
+The origins of the approach to power analysis employed here, which [Piepho et al.,   2022](https://www.doi.org/10.1017/S0021859622000466) refers to as the "plug-in approach", are actually quite old, but a recent description (for its use in SAS) can be found in the last chapter of [Generalized Linear Mixed Models: Modern Concepts and Methods](https://doi.org/10.1201/9780429092060). It has the advantages of being very general, capable of accommodating a wide variety of designs/models, while remaining simpler to implement and less computationally demanding than simulation-based power analysis. The basic idea is to first encode information about sample size and expected treatments means (and differences) for the proposed experiment in a fake data set, to then specify a model encoding information about the design of the proposed experiment, and finally to "fit" the model while fixing ("plugging in") the values for the random effects and dispersion parameters. The result is that the modelling software does all the work of calculating the required standard errors which are needed to derive the power of the tests under the hypothetical conditions defined by our fake data and proposed model. By manipulating the fake data set, model, or variance parameter values, it becomes possible to explore how differences in sample size, effect size, experimental design, or random effects will impact statistical power. In R, the `glmmTMB` package allows one to fix parameter estimates during model fitting, making it the perfect tool for this sort of power analysis. 
 
 # Housekeeping
 
@@ -63,8 +63,10 @@ library(emmeans)
 To begin, lets consider the simplest example, in which we will establish an single factor experiment with two levels ('A' and 'B') arranged in a completely randomized design (CRD) with 8 replicates per treatment. Under these circumstances, we can actually skip the modeling stage and simply perform a two-sample t-test on this data, and for that we have tools in base R for performing power analysis. By simply leaving one of the arguments the set `n`, `delta`, `sd`, `sig.level` and `power` to the value `NULL`,  that value will be calculated on the basis of the other arguments provided. Thus, if we assume a residual standard deviation of 1.5 and a difference in treatment means of 3, then our power is 0.96 (which is excellent).
 
 ```{r}
-power.t.test(n = 8, delta = 3, sd = 1.5, sig.level = 0.05, power = NULL, 
-             type = 'two.sample', alternative = 'two.sided')
+power.t.test(n = 8, delta = 3, sd = 1.5, 
+             sig.level = 0.05, power = NULL, 
+             type = 'two.sample', 
+             alternative = 'two.sided')
 ```
 
 We can also use the alternative "plug-in" approach, by creating a fake data set and "fitting" the model using a fixed value for the residual standard deviation. The first step is to create a data set with the correct number of rows with treatment "A" and "B", thereby encoding the proposed sample size. Then, the response value, `Y`, is set such that the difference between the treatments is 3 (the actual values are unimportant here, although that will not always be true):
@@ -73,23 +75,26 @@ We can also use the alternative "plug-in" approach, by creating a fake data set 
 nrep = 8 # Number of replicates
 nfac = 2 # Number of treatments
 
-# Expand grid creates a data set with all combinations of treatments
+# Expand grid creates a data set
+# with all combinations of treatments
 ex1 = expand.grid(Rep = factor(1:nrep),
                   Trt = factor(LETTERS[1:nfac])) |> 
   data.frame()
 
-# Set the response values to correspond to the expected treatment differences
+# Set the response values to correspond 
+# to the expected treatment differences
 ex1$Y = ifelse(ex1$Trt == 'A', 0, 3)
-head(ex1)
+
+head(ex1, n = 10)
 ```
 
 Now, we fit the model, but while fixing the residual standard deviation to 1.5 using the trick shown below, which entails two arguments, `dispformula` and `control`:
 
 ```{r}
 ex1_mod = glmmTMB(Y ~ Trt, data = ex1, 
-                  dispformula = ~ 0,    # Set dispersion to "zero"...
-                  family = gaussian(),
-                  REML = T,
+                  family = gaussian(), REML = T,
+                  # Set dispersion to "zero"...
+                  dispformula = ~ 0,    
                   # ... and then define what value to use for "zero",
                   # expressed on the log scale:
                   control = glmmTMBControl(zerodisp_val = log(1.5)))
@@ -113,7 +118,7 @@ power_ftest(ex1_mod, ddf = 'asymptotic')
 In addition to the F-test, we are probably also interested in assessing the power of specific contrasts. To do this, we first need to calculate the estimated marginal means for the factor levels we want to compare:
 
 ```{r}
-(emm = emmeans(ex1_mod, ~Trt))               # Estimated treatment means
+(emm = emmeans(ex1_mod, ~Trt)) # Estimated treatment means
 ```
 
 We then define our contrasts of interest as a named list, each item of which is a vector of weights. Full treatment of how to define contrasts in R is beyond the scope of this work, but for now suffice to say that a valid class contrasts consist of positive and negative weights, which should all sum to +1 and -1, respectively, and which are ordered to match the output of the call to `emmeans`. Thus, for this example where there is only one possible contrast, we would test for a difference between treatments A and B as follows:
@@ -134,9 +139,9 @@ We've now seen that for this simple example the "plug-in" method produces the sa
 
 # Example 2: A Split-Plot Randomized Complete Block Design
 
-We are basing this proposed experiment on the one described in Frank Yates' 1935 paper entitled "Complex experiments" (https://doi.org/10.2307/2983638), which was structured as a randomized complete block design (RCBD) with six blocks, a main-plot factor of genotype with three levels ('Marvellous', 'Victory' and 'GoldenRain'), and a sub-plot factor of nitrogen application rate, at 4 levels (0, 20, 40, 60 kg/ha). Let's imagine that at zero nitrogen fertilization, we expect Victory and Golden Rain to yield 1400 and Marvellous to yield 1500. Meanwhile, you expect increases of 150 kg/ha at each higher level of N, except for Victory, which you expect to gain 200 kg/ha for each additional increase in N. Finally, you expect similar standard deviation among blocks, mainplots, and the residual error of around 250, 200 and 250, respectively. 
+We are basing this proposed experiment on the one described in Frank Yates' 1935 paper entitled "Complex experiments" (https://doi.org/10.2307/2983638), which was structured as a randomized complete block design (RCBD) with six blocks, a main-plot factor of genotype with three levels ('Marvellous', 'Victory' and 'GoldenRain'), and a sub-plot factor of nitrogen application rate, at 4 levels (here, we use: 0, 20, 40, 60 kg/ha). Let's imagine that at zero nitrogen fertilization, we expect Victory and Golden Rain to yield 1400 kg/ha and Marvellous to yield 1500 kg/ha. Meanwhile, you expect increases of 150 kg/ha at each higher level of N, except for Victory, which you expect to gain 200 kg/ha for each additional increase in N. Finally, you expect similar standard deviation among blocks, mainplots, and the residual error of around 250, 200 and 250, respectively. 
 
-The first step is to create the frame of the dataset by using expand.grid to create all combinations of the two factor levels:
+The first step is to create a "treatment dictionary", which describes the treatment structure. For a factorial treatment such like this, the expand.grid function can be used to create all combinations of the two factor levels:
 
 ```{r}
 ex2_trt_dict = expand.grid(gen = c('GoldenRain', 'Marvellous', 'Victory'), 
@@ -145,7 +150,7 @@ ex2_trt_dict = expand.grid(gen = c('GoldenRain', 'Marvellous', 'Victory'),
 ex2_trt_dict
 ```
 
-The, the expected mean response values need to be added in. This is the most tedious part of the "plug-in" process, but if you keep yourself organized, doesn't need to be too bad. Here, I've kept my treatments arranged in an organized manner, and am entering the expected treatment means as formulae, so that I can more easily see/compare my written expectations with the actual values:
+The, the expected mean response values need to be added in. This is the most tedious part of the "plug-in" process, but if you keep yourself organized, doesn't need to be too bad. Here, I've kept my treatments arranged in an organized manner, and am entering the expected treatment means as formulae, so that I can more easily see/compare my written expectations with the actual values. Note that if it helps, the treatment dictionary can also be created in Excel (or the spreadsheet software of your choice), and then simply imported into R.
 
 ```{r}
 ex2_trt_dict$yield = c(1400 + 150*0, 
@@ -163,14 +168,20 @@ ex2_trt_dict$yield = c(1400 + 150*0,
 ex2_trt_dict 
 ```
 
-I then merge this information with a data set defining the block IDs. This merging ensures the fake data set contains all combinations of all factor levels for each block ID:
+We then create a data frame encoding the design. Here, it will simply be a data frame with one column for "Block", but in other contexts we might need to use expand grid and incorporate additional columns for location and/or year, for example.
 
 ```{r}
 nblk = 6
-ex2 = ex2_trt_dict |>
-  merge(data.frame(block = factor(1:nblk)))
+ex2_des_df = data.frame(block = factor(1:nblk))
+ex2_des_df
+```
 
-str(ex2)
+Using the `merge` function will then replicate the whole treatment dictiorary for every row (i.e., block) in our design data frame:
+
+```{r}
+ex2 = merge(ex2_trt_dict, ex2_des_df)
+
+head(ex2, 10)
 ```
 
 I can now fit the model. First, note that the same trick as previously is used to fix the value of the residual standard deviation. But here we also have two random effects standard deviations to incorporate as well, and that requires a different trick: we set starting values (using the `start` argument) and then fix those values using the `map` argument. For the map argument, it should be a list of factors ("theta" values corresponding to random effects) where each value set to `NA` will not be estimated, but kept at its starting value. Here, we want both of the two "theta" parameters to be fixed, so the we have `map = list(theta = factor(c(NA, NA)))`:
