@@ -37,20 +37,20 @@ B_1 \begin{bmatrix} 20 & 20 \\ 20 & 20\end{bmatrix} & \begin{bmatrix} 25 & 25 \\
 Now let us imagine that, due to the nature of our research, we are primarily interested in the overall effect of A. Given that we did not observe an interaction, we then might wish to report the average mean of A[0] and of mean of A[1] (averaging over the 2 levels of B). There are 2 ways we could do this, either averaging all the values in each of the A columns together to get the simple arithmetic mean:
 
 $$\begin{matrix}
-A_0 & A_1 \\
-\sum\begin{bmatrix} 10 & 10 \\ 10 & 10 \\ 20 & 20 \\ 20 & 20 \end{bmatrix}\div8 & \sum\begin{bmatrix} 15 & 15 \\ 15 & 15 \\ 25 & 25 \\ 25 & 25\end{bmatrix}\div 8\\ 
-= & = \\ \color{green}{\textbf{15}} & \color{green}{\textbf{20}}
+A_0 ~~~~~~& A_1 \\
+\sum\begin{bmatrix} 10 & 10 \\ 10 & 10 \\ 20 & 20 \\ 20 & 20 \end{bmatrix}\div8 ~~~~~~& \sum\begin{bmatrix} 15 & 15 \\ 15 & 15 \\ 25 & 25 \\ 25 & 25\end{bmatrix}\div 8\\ 
+= ~~~~& = \\ \color{green}{\textbf{15}} ~~~~~& \color{green}{\textbf{20}}
 \end{matrix}$$
 
 Or we could first take the average of each cell and then average those averages. Let's call this the *estimated marginal means*:
 
 $$\begin{matrix}
-~~~~~~A_0 & & A_1 & \\
-\sum \begin{bmatrix} 10 & 10 \\ 10 & 10\end{bmatrix}\div4 & = 10 & \sum \begin{bmatrix} 15 & 15 \\ 15 & 15\end{bmatrix}\div4 & = 15 \\ 
-\sum \begin{bmatrix} 20 & 20 \\ 20 & 20\end{bmatrix}\div4 & = 20 & \sum\begin{bmatrix} 25 & 25 \\ 25 & 25\end{bmatrix}\div4 & = 25 \\ 
-& \frac{10 + 20}{2} & & \frac{15 + 25}{2}\\
-& = & & = \\
-& \color{green}{\textbf{15}} & & \color{green}{\textbf{20}} \\
+~~~~~~A_0 ~~~~~& & A_1 & \\
+\sum \begin{bmatrix} 10 & 10 \\ 10 & 10\end{bmatrix}\div4 & = 10 ~~~~~& \sum \begin{bmatrix} 15 & 15 \\ 15 & 15\end{bmatrix}\div4 & = 15 \\ 
+\sum \begin{bmatrix} 20 & 20 \\ 20 & 20\end{bmatrix}\div4 & = 20 ~~~~~& \sum\begin{bmatrix} 25 & 25 \\ 25 & 25\end{bmatrix}\div4 & = 25 \\ 
+& \frac{10 + 20}{2} ~~~~~& & \frac{15 + 25}{2}\\
+& = ~~~~ & & = \\
+& \color{green}{\textbf{15}} ~~~~~~& & \color{green}{\textbf{20}} \\
 \end{matrix}$$
 
 In this example, these two approaches produce identical results, and so it doesn't matter which approach we use. But now let's imagine that one sample was lost (completely at random) during data collection. Our data now looks like this:
@@ -64,20 +64,20 @@ B_1 \begin{bmatrix} 20 & 20 \\ 20 & 20\end{bmatrix} & \begin{bmatrix} 25 & 25 \\
 If we use the estimated marginal means, our results do not change. In other words, *our results are not affected by a lack of balance*:
 
 $$\begin{matrix}
-~~~~~~A_0 & & A_1 & \\
-\sum \begin{bmatrix} 10 & 10 \\ 10 & 10\end{bmatrix}\div4 & = 10 & \sum \begin{bmatrix} 15 & 15 \\ 15 & 15\end{bmatrix}\div4 & = 15 \\ 
-\sum \begin{bmatrix} 20 & 20 \\ 20 & 20\end{bmatrix}\div4 & = 20 & \sum\begin{bmatrix} 25 & 25 \\ 25 & \end{bmatrix}\div3 & = 25 \\ 
-& \frac{10 + 20}{2} & & \frac{15 + 25}{2}\\
-& = & & = \\
-& \color{green}{\textbf{15}} & & \color{green}{\textbf{20}} \\
+A_0 ~~~~~& & A_1 & \\
+\sum \begin{bmatrix} 10 & 10 \\ 10 & 10\end{bmatrix}\div4 & = 10 ~~~~~ & \sum \begin{bmatrix} 15 & 15 \\ 15 & 15\end{bmatrix}\div4 & = 15 \\ 
+\sum \begin{bmatrix} 20 & 20 \\ 20 & 20\end{bmatrix}\div4 & = 20 ~~~~~& \sum\begin{bmatrix} 25 & 25 \\ 25 & \end{bmatrix}\div3 & = 25 \\ 
+& \frac{10 + 20}{2} ~~~~~& & \frac{15 + 25}{2}\\
+& = ~~~~& & = \\
+& \color{green}{\textbf{15}} ~~~~~& & \color{green}{\textbf{20}} \\
 \end{matrix}$$
 
 But that is *not* the case for the simple arithmetic means. Here, the loss of an observation from the higher yielding A[1]B[1] treatment means that the average for A[1] is biased downward, and our results are thus sensative to unequal replication among our treatments. 
 
 $$\begin{matrix}
-A_0 & A_1 \\
-\sum\begin{bmatrix} 10 & 10 \\ 10 & 10 \\ 20 & 20 \\ 20 & 20 \end{bmatrix}\div8 & \sum\begin{bmatrix} 15 & 15 \\ 15 & 15 \\ 25 & 25 \\ 25 & \end{bmatrix}\div 7\\ 
-= & = \\ \color{green}{\textbf{15}} & \color{red}{\textbf{19.28571}}
+A_0 ~~~~~& A_1 \\
+\sum\begin{bmatrix} 10 & 10 \\ 10 & 10 \\ 20 & 20 \\ 20 & 20 \end{bmatrix}\div8 ~~~~~& \sum\begin{bmatrix} 15 & 15 \\ 15 & 15 \\ 25 & 25 \\ 25 & \end{bmatrix}\div 7\\ 
+= ~~~~& = \\ \color{green}{\textbf{15}} ~~~~~& \color{red}{\textbf{19.28571}}
 \end{matrix}$$
 
 **The estimated marginal means consistently provide the estimates one would expect if the experiment was balanced, whether it was or not**. While it is true that there are some special occasions - especially for some types of observational studies - where this may not be what you as a researcher are interested in reporting, but for the overwhelming marjority of designed experiments, it is what we are interested in reporting. And since the marginal means (EMMs) "work" whether the experiment is balanced or not, it is safer to default to reporting EMMs.
