@@ -97,6 +97,7 @@ First, we get our R environment ready:
 # Load packages
 library(tidyverse)
 library(emmeans)
+library(powerutilities)
 ```
 
 The following data are the results of an experiment - arranged as a completely randomized design - which compared yields of eight different cultivars of beet (*Beta vulgaris* L.).
