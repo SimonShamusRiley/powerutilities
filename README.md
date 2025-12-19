@@ -19,11 +19,12 @@ power can be derived. By manipulating the fake data set, model, or variance
 parameter values, it becomes possible to explore how differences in sample size,
 effect size, experimental design, or random effects will impact power.
 
-Importantly, the package also provides a number of vignettes (still under 
+A very important feature of the package are its vignettes (still under 
 development), which serve to:
 
 - Provide a fuller, more detailed description of this approach to power 
-analysis
+analysis, as well as some useful background information on the use of
+estimated marginal means and contrasts in R
 
 - Present a variety of practical examples demonstrating the various ways this 
 approach can serve the concrete needs of practicing researchers (especially 
@@ -47,6 +48,7 @@ install.packages("devtools")
 devtools::install_github('SimonShamusRiley/powerutilities', 
                          build_vignettes = T)
 ```
+
 
 
 
