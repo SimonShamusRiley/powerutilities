@@ -19,12 +19,12 @@ power_ftest = function(mod, ddf = 'containment', type = 2, alpha = 0.05) {
     tibble::rownames_to_column(var = 'factor') |> 
     dplyr::mutate(alpha = alpha, 
                   nc_param = Fvalue*numDF, 
-                  F_crit = qf(1-alpha, numDF, denDF, 0),
-                  power = 1-pf(F_crit, numDF, denDF, ncp = nc_param)) |> 
+                  Fcrit = qf(1-alpha, numDF, denDF, 0),
+                  power = 1-pf(Fcrit, numDF, denDF, ncp = nc_param)) |> 
     dplyr::select(factor, numDF, denDF, alpha, 
-                  Fvalue, F_crit, pvalue, power) |> 
+                  Fvalue, Fcrit, pvalue, power) |> 
     mutate(Fvalue = sprintf('%.1f', Fvalue), 
-           F_crit = sprintf('%.1f', F_crit), 
+           Fcrit = sprintf('%.1f', Fcrit), 
            power = sprintf('%.3f', power), 
            pvalue = ifelse(pvalue < 0.0001, 
                            '<.0001', sprintf('%.4f', pvalue)))
@@ -53,13 +53,13 @@ power_contrast = function(emm, contr_list, ddf, alpha = 0.05){
                   Fvalue = t.ratio^2, 
                   nc_param = Fvalue*numDF, 
                   alpha = alpha, 
-                  F_crit = qf(1-alpha, numDF, denDF, 0),
-                  power = 1-pf(F_crit, numDF, denDF, ncp = nc_param)) |> 
+                  Fcrit = qf(1-alpha, numDF, denDF, 0),
+                  power = 1-pf(Fcrit, numDF, denDF, ncp = nc_param)) |> 
     dplyr::rename(pvalue = p.value) |> 
     dplyr::select(contrast:SE, numDF, denDF, alpha, 
-                  Fvalue, F_crit, pvalue, power) |> 
+                  Fvalue, Fcrit, pvalue, power) |> 
     mutate(Fvalue = sprintf('%.1f', Fvalue), 
-           F_crit = sprintf('%.1f', F_crit), 
+           Fcrit = sprintf('%.1f', Fcrit), 
            power = sprintf('%.3f', power), 
            pvalue = ifelse(pvalue < 0.0001, 
                            '<.0001', sprintf('%.4f', pvalue)))
