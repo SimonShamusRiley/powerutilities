@@ -1,0 +1,364 @@
+---
+title: 'Specifying Contrasts in R'
+output: 
+  rmarkdown::html_vignette:
+    toc: yes
+    df_print: kable
+vignette: >
+  %\VignetteIndexEntry{Specifying Contrasts in R}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# Introduction
+
+The primary purpose of this vignette is to introduce contrasts to those who may not be familiar with them and to provide guidance on how to specify and use contrasts in R, specifically in the context of the `emmeans` package. Before we can get to contrasts, however, it is necessary to introduce estimated marginal means and to address a very frequently raised question about why/when they are preferable to simple arithemetic means.
+
+# Estimated Marginal Means
+
+I am frequently asked some version of the question: **why should report estimated marginal means instead of simple arithmetic means?** I believe the following thought experiment provides the quickest, simplest, and most compelling answer.
+
+Consider a hypothetical factorial experiment with two treatments, A and B, each of which is either absent (= 0) or present (= 1). Suppose the experiment has a completely randomized design with four replicates. A table of the resulting data might be arranged like this:
+
+$$\begin{matrix}
+~~~~~~A_0 & A_1 \\
+B_0 \begin{bmatrix} X & X \\ X & X\end{bmatrix} & \begin{bmatrix} X & X \\ X & X\end{bmatrix} \\ 
+B_1 \begin{bmatrix} X & X \\ X & X\end{bmatrix} & \begin{bmatrix} X & X \\ X & X\end{bmatrix}
+\end{matrix}$$
+
+Let's further imagine that the effect of A is to increase yield by 5, the effect of B is to increase yield by 10, and there is no interaction (i.e., the effect of adding both is just the sum of the two individual effects, or 15). For the sake of illustration, let us further assume there is zero sampling variation, meaning that every observation collected during the experiment will be exactly equal to the mean for that treatment combination. Note that none of the results which follow require this in any way, but removing the background noise will make the patterns much easier to see. under those circumstances, the results of our experiment will look like this:
+
+$$\begin{matrix}
+~~~~~~A_0 & A_1 \\
+B_0 \begin{bmatrix} 10 & 10 \\ 10 & 10\end{bmatrix} & \begin{bmatrix} 15 & 15 \\ 15 & 15\end{bmatrix} \\ 
+B_1 \begin{bmatrix} 20 & 20 \\ 20 & 20\end{bmatrix} & \begin{bmatrix} 25 & 25 \\ 25 & 25\end{bmatrix}
+\end{matrix}$$
+
+Now let us imagine that, due to the nature of our research, we are primarily interested in the overall effect of A. Given that we did not observe an interaction, we then might wish to report the average mean of A[0] and of mean of A[1] (averaging over the 2 levels of B). There are 2 ways we could do this, either averaging all the values in each of the A columns together to get the simple arithmetic mean:
+
+$$\begin{matrix}
+A_0 & A_1 \\
+\sum\begin{bmatrix} 10 & 10 \\ 10 & 10 \\ 20 & 20 \\ 20 & 20 \end{bmatrix}\div8 & \sum\begin{bmatrix} 15 & 15 \\ 15 & 15 \\ 25 & 25 \\ 25 & 25\end{bmatrix}\div 8\\ 
+= & = \\ \color{green}{\textbf{15}} & \color{green}{\textbf{20}}
+\end{matrix}$$
+
+Or we could first take the average of each cell and then average those averages. Let's call this the *estimated marginal means*:
+
+$$\begin{matrix}
+~~~~~~A_0 & & A_1 & \\
+\sum \begin{bmatrix} 10 & 10 \\ 10 & 10\end{bmatrix}\div4 & = 10 & \sum \begin{bmatrix} 15 & 15 \\ 15 & 15\end{bmatrix}\div4 & = 15 \\ 
+\sum \begin{bmatrix} 20 & 20 \\ 20 & 20\end{bmatrix}\div4 & = 20 & \sum\begin{bmatrix} 25 & 25 \\ 25 & 25\end{bmatrix}\div4 & = 25 \\ 
+& \frac{10 + 20}{2} & & \frac{15 + 25}{2}\\
+& = & & = \\
+& \color{green}{\textbf{15}} & & \color{green}{\textbf{20}} \\
+\end{matrix}$$
+
+In this example, these two approaches produce identical results, and so it doesn't matter which approach we use. But now let's imagine that one sample was lost (completely at random) during data collection. Our data now looks like this:
+
+$$\begin{matrix}
+~~~~~~A_0 & A_2 \\
+B_0 \begin{bmatrix} 10 & 10 \\ 10 & 10\end{bmatrix} & \begin{bmatrix} 15 & 15 \\ 15 & 15\end{bmatrix} \\ 
+B_1 \begin{bmatrix} 20 & 20 \\ 20 & 20\end{bmatrix} & \begin{bmatrix} 25 & 25 \\ 25 & \end{bmatrix}
+\end{matrix}$$
+
+If we use the estimated marginal means, our results do not change. In other words, *our results are not affected by a lack of balance*:
+
+$$\begin{matrix}
+~~~~~~A_0 & & A_1 & \\
+\sum \begin{bmatrix} 10 & 10 \\ 10 & 10\end{bmatrix}\div4 & = 10 & \sum \begin{bmatrix} 15 & 15 \\ 15 & 15\end{bmatrix}\div4 & = 15 \\ 
+\sum \begin{bmatrix} 20 & 20 \\ 20 & 20\end{bmatrix}\div4 & = 20 & \sum\begin{bmatrix} 25 & 25 \\ 25 & \end{bmatrix}\div3 & = 25 \\ 
+& \frac{10 + 20}{2} & & \frac{15 + 25}{2}\\
+& = & & = \\
+& \color{green}{\textbf{15}} & & \color{green}{\textbf{20}} \\
+\end{matrix}$$
+
+But that is *not* the case for the simple arithmetic means. Here, the loss of an observation from the higher yielding A[1]B[1] treatment means that the average for A[1] is biased downward, and our results are thus sensative to unequal replication among our treatments. 
+
+$$\begin{matrix}
+A_0 & A_1 \\
+\sum\begin{bmatrix} 10 & 10 \\ 10 & 10 \\ 20 & 20 \\ 20 & 20 \end{bmatrix}\div8 & \sum\begin{bmatrix} 15 & 15 \\ 15 & 15 \\ 25 & 25 \\ 25 & \end{bmatrix}\div 7\\ 
+= & = \\ \color{green}{\textbf{15}} & \color{red}{\textbf{19.28571}}
+\end{matrix}$$
+
+**The estimated marginal means consistently provide the estimates one would expect if the experiment was balanced, whether it was or not**. While it is true that there are some special occasions - especially for some types of observational studies - where this may not be what you as a researcher are interested in reporting, but for the overwhelming marjority of designed experiments, it is what we are interested in reporting. And since the marginal means (EMMs) "work" whether the experiment is balanced or not, it is safer to default to reporting EMMs.
+
+# Contrast Analysis in R
+
+These data sets and examples are taken from Saville & Wood (1991). Section III of that book is among the single best works available on the subject of contrasts. The geometric methods they employ for analysing data and performing the contrast analysis will be unfamiliar, to say the least, to most readers but those who can look past that fact will be greatly rewarded.
+
+## Class Comparisons Using Custom Contrasts
+
+First, we get our R environment ready:
+
+```{r}
+#| message: false
+#| warning: false
+
+# Load packages
+library(tidyverse)
+library(emmeans)
+```
+
+The following data are the results of an experiment - arranged as a completely randomized design - which compared yields of eight different cultivars of beet (*Beta vulgaris* L.).
+
+```{r}
+data("greenfeeds")
+
+greenfeeds |> 
+  pivot_wider(names_from = 'Rep', 
+              values_from = 'Yield', 
+              names_prefix = 'Rep:')
+```
+
+The eight cultivars included in the study include four "Mangel" type cultivars and four "Fodder Beet" type cultivars. This naturally suggests the research question:
+
+**Q1: Does the yield of the "mangel types" differ, on average, from the yield of the "fodder types"?**
+
+Let the following symbols stand in for the mean yield of each cultivar:
+
+| Treatment | Mean |
+|------------------------------------|------------------------------------|
+| Brigadier Mangels | $$                                                                                                                                                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                                                                                                                            \mu_1                          
+                                                                                                                                                                                                                                                                                                                                                                            $$ |
+| Yellow Globe Mangels | $$                                                                                                                                                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                                                                                                                            \mu_2                          
+                                                                                                                                                                                                                                                                                                                                                                            $$ |
+| Orange Globe Mangels | $$                                                                                                                                                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                                                                                                                            \mu_3                          
+                                                                                                                                                                                                                                                                                                                                                                            $$ |
+| Red Intermediate Mangels | $$                                                                                                                                                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                                                                                                                            \mu_4                          
+                                                                                                                                                                                                                                                                                                                                                                            $$ |
+| Mono Rosa Fodder Beet | $$                                                                                                                                                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                                                                                                                            \mu_5                          
+                                                                                                                                                                                                                                                                                                                                                                            $$ |
+| Mono Blanc Fodder Beet | $$                                                                                                                                                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                                                                                                                            \mu_6                          
+                                                                                                                                                                                                                                                                                                                                                                            $$ |
+| Mono Bomba Fodder Beet | $$                                                                                                                                                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                                                                                                                            \mu_7                          
+                                                                                                                                                                                                                                                                                                                                                                            $$ |
+| Yellow Daeno Fodder Beet | $$                                                                                                                                                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                                                                                                                            \mu_8                          
+                                                                                                                                                                                                                                                                                                                                                                            $$ |
+
+We can now express our research question as a testable, statistical hypothesis:
+
+$$
+H_1: \frac{\mu_1 + \mu_2 + \mu_3 + \mu_4}{4} = \frac{\mu_5 + \mu_6 + \mu_7 + \mu_8}{4}
+$$
+
+Which we can re-express algebraically as follows:
+
+$$
+H_1: \frac{\mu_1 + \mu_2 + \mu_3 + \mu_4}{4} - \frac{\mu_5 + \mu_6 + \mu_7 + \mu_8}{4} = 0
+$$
+
+And further, as:
+
+$$
+H_1: \frac{1}{4}\mu_1 +\frac{1}{4}\mu_2 + \frac{1}{4}\mu_3 + \frac{1}{4}\mu_4 - \frac{1}{4}\mu_5 - \frac{1}{4}\mu_6 - \frac{1}{4}\mu_7 - \frac{1}{4}\mu_8= 0
+$$
+
+What this re-expression has given us is a set of coefficients or weights (i.e. 0.25, 0.25, 0.25, 0.25, -0.25, -0.25, -0.25, -0.25), with one for each treatment mean, which together define a null hypothesis of no difference between two groups of means. This is exactly how we specify contrasts in R: as a list of vectors, each vector being a set of contrast coefficients:
+
+```{r}
+# First, fit the model
+greenfeeds_fit = lm(Yield ~ Treatment, data = greenfeeds)
+
+# Calculate the marginal means
+(greenfeeds_emm = emmeans(greenfeeds_fit, specs = ~ Treatment))
+
+# Define our contrasts using a named list
+contr_list = list('Mangel vs. Fodder Beets' = c(0.25,  0.25,  0.25,  0.25,
+                                               -0.25, -0.25, -0.25, -0.25))
+
+# Perform the test
+contrast(greenfeeds_emm, contr_list)
+```
+
+First, note that the ordering of the coefficients in each contrast needs to match the ordering of the treatments given by the output of the call to `emmeans`. Second, note that the resulting estimate is negative, which indicates the "minus" group (i.e. the set of treatment means having negative coefficients) had the larger yields - specifically, having yields higher by 2.86 tons/ha, on average.
+
+Just as the treatments naturally divide into two groups, there are natural sub-groupings within the "Mangel" and "Fodder Beet" types. For example, another contrast which one might be interested in is:
+
+**Q2: Do the globe-type mangels differ in yield, on average, from the brigadier-type mangels?**
+
+In this case, our null hypothesis looks like this:
+
+$$
+H_2: \frac{\mu_2 + \mu_3}{2} - \frac{\mu_1}{1} = 0
+$$ or, equivalently:
+
+$$
+H_2: \frac{1}{2}\mu_2 + \frac{1}{2}\mu_3 - 1\mu_1 = 0
+$$
+
+This contrast gets encoded in R as follows:
+
+```{r}
+# Define our contrasts using a named list
+contr_list = list('Mangels vs. Fodder Beets' = c(0.25,  0.25,  0.25,  0.25,
+                                                -0.25, -0.25, -0.25, -0.25), 
+                  'Globe vs. Brigadier Mangels' = c(-1, 0.5, 0.5, 0,
+                                                     0, 0,   0,   0))
+
+# Perform the test
+contrast(greenfeeds_emm, contr_list)
+```
+
+Note that, if a group consists of only one treatment, that treatment gets a coefficient of 1 (or -1), and if a treatment does not belong in any of the groups being compared in that contrast, it gets a coefficient of zero.
+
+We are now in a position to define the "rules" for properly specifying contrasts in R:
+
+**Rules for All Contrasts:**
+
+1)  A set of contrasts is specified as a list. It is good practice to give an informative name to each individual contrast in the list.
+
+2)  Each contrast in the list is specified as a vector of weights, with one weight for each treatment mean generated from the call to `emmeans()` (if you use a grouping factor in the `emmeans` formula, it will be the number of treatment means in each group, not the total number of treatment means).
+
+3)  The ordering the weights must correspond with the ordering of the treatment means generated by the call to `emmeans()`.
+
+4)  The whole contrast must sum to 0.
+
+**Rules for Class Comparisons**
+
+5)  the groups being compared in any given contrast are defined by having weights with a common sign (+/-), while a treatment not belonging to either of those groups should be given a weight of zero.
+
+6)  All the positive weights must sum to +1 and all the negative weights must sum to -1
+
+7)  If the resulting estimate is positive, it means the group sharing positive weights was larger; if the resulting estimate is negative, the group with the negative weights was larger.
+
+## Orthogonality
+
+Contrasts which are mutually independent of each other are said to be *orthogonal*. You can check to see if two contrasts are orthogonal by verifying that their product is equal to zero. For class contrasts, it is possible to construct a set of orthogonal contrasts by simply dividing all the treatment means into two groups, and then each of those groups into two sub-groups, and each sub-group into two sub-sub-groups, and so on until no further subdivision is possible (the sub-groups do not need to be equal sized). If the number of treatment groups is *j*, this set will always contain *j*-1 contrasts. You are not required to make sure your pre-planned contrasts are all orthogonal, although you should generally limit yourself to not testing more than *j*-1 of them. **Whether your contrasts are orthogonal or not, if they are defined before data analysis, and the number is kept modest (i.e. \< *j*), you don't need to use a p-value adjustment, such as e.g. Tukey's HSD**, which is good, because those adjustments cause a loss of statistical power.
+
+Here is one complete set of orthogonal contrasts for the greenfields data:
+
+```{r}
+orth_contr_list = list('Mangel vs Fodder'       = c( 1, 1,  1,  1,  -1,   -1,  -1, -1)/4, 
+                       
+                       'Globe vs Non-Globe'     = c(-1, 1,  1, -1,   0,    0,   0,  0)/2,
+                       'Yellow vs Orange Globe' = c( 0, 1, -1,  0,   0,    0,   0,  0), 
+                       'Brigadier vs Red Int.'  = c( 1, 0,  0, -1,   0,    0,   0,  0), 
+                       
+                       'Mono vs Daeno Fodder'   = c( 0, 0,  0,  0, 1/3,  1/3, 1/3, -1), 
+                       'Non-Bomba vs Bomba'     = c( 0, 0,  0,  0, 1/2,  1/2,  -1,  0), 
+                       'Rosa vs Blanc Fodder'   = c( 0, 0,  0,  0, 1/2, -1/2,   0,  0))
+
+contrast(greenfeeds_emm, orth_contr_list)
+```
+
+Note that when the two groups being compared are each composed of the same number of treatment means, as is the case for the "mangel type" contrasts, then the weights can be specified with integer values and the whole vector divided by the corresponding number of treatments in each group. This doesn't work when the groups are composed of different numbers of treatment means, as is the case for some of the "fodder type" contrasts. Moreover, it is sometimes not simply convenient but necessary to specify the weights as fractions, as when some weights are a repeating decimal like $\frac{1}{3}$. Also note that there are 8-1=7 orthogonal contrasts in this set; although there are other possible sets of orthogonal contrasts which could be specified, they will all contain 7 contrasts.
+
+## Interaction Contrasts
+
+These data (also from Saville and Wood, 1991) come from a 2x2 factorial experiment examining the effect of phosphorus (supplied as superphosphate at 250kg/ha) and nitrogen (supplied as nitrolime at 250kg/ha) fertilization on barley yield. The study was established as a completely randomized design.
+
+```{r}
+# Define treatments (and rep numbers)
+barley = expand.grid(Superphosphate = c(0, 250), 
+                     Nitrolime = c(0, 250), Rep = 1:5) |> 
+  mutate(across(1:3, factor),
+         Yield = c(19.2, 18.2, 20.0, 23.6, 
+                   18.4, 19.8, 21.6, 21.6,
+                   17.0, 19.4, 22.0, 23.2, 
+                   17.6, 19.0, 20.8, 21.4, 
+                   17.2, 19.8, 20.4, 21.2)) |> 
+  dplyr::select(Rep, Nitrolime, Superphosphate, Yield)
+
+head(barley)
+```
+
+The first two questions which naturally emerge from such a study are conceptually very straightforward:
+
+**Q1: Does superphosphate, on average, increase yield?**
+
+and
+
+**Q2: Does nitrolime, on average, increase yield?**
+
+If we use the following to denote the different treatment means:
+
+| Superphosphate | Nitrolime | Symbol |
+|------------------------|------------------------|------------------------|
+| No | No | $$                                                                                                     
+                                                                                                                        \mu_1         
+                                                                                                                        $$ |
+| Yes | No | $$                                                                                                     
+                                                                                                                        \mu_2         
+                                                                                                                        $$ |
+| No | Yes | $$                                                                                                     
+                                                                                                                        \mu_3         
+                                                                                                                        $$ |
+| Yes | Yes | $$                                                                                                     
+                                                                                                                        \mu_4         
+                                                                                                                        $$ |
+
+Then the first of these two questions can be expressed as the following null hypotheses:
+
+$$H_1:(\frac{1}{2}\mu_2 + \frac{1}{2}\mu_4) - (\frac{1}{2}\mu_1 + \frac{1}{2}\mu_3) = 0$$ But since its important that when specifying our weights we maintain the correct order for the treatments, we use algebra to rearrange the terms as:
+
+$$H_1: -\frac{1}{2}\mu_1 + \frac{1}{2}\mu_2 - \frac{1}{2}\mu_3 + \frac{1}{2}\mu_4 = 0$$
+
+Similarly, the null hypothesis for the second of our two research questions is
+
+$$H_2: -\frac{1}{2}\mu_1 - \frac{1}{2}\mu_2 + \frac{1}{2}\mu_3 + \frac{1}{2}\mu_4 = 0$$ Somewhat more subtle is the concept of an interaction. It can be framed in a few, equivalent ways:
+
+**Q3: Is the effect of superphosphate consistent across levels of nitrolime?**
+
+**Q3: Is the effect of nitrolime consistent across levels of superphosphate?**
+
+**Q3: Does the combination of superphosphate and nitrolime increase or decrease yield beyond what would be expected from the two treatments individually?**
+
+In formulating the null hypothesis, I find it useful to this of it as: "is there a difference in the differences?":
+
+$$H_3: (\mu_4 - \mu_3) - (\mu_2 - \mu_1) = 0$$
+
+The first part of the equation, $\mu_4 - \mu_3$, is the effect of adding superphosphate in the presence of nitrolime, and the second part of the equation, $\mu_2 - \mu_1$, is the effect of adding superphosphate in the absence of nitrolime. If the whole expression, i.e. the "difference in the differences", is *not* zero, it means that the effect of superphosphate is *not* consistent across levels of nitrolime: there is an interaction. In such a circumstance, the estimates for the main effects (Q1 and Q2) are no longer meaningful, since there isn't one effect of, for example, superphosphate but instead one effect when nitrolime is present and another effect when nitrolime is absent.
+
+Distributing the minus in the second part of the hypothesis, we get:
+
+$$H_3: \mu_4 - \mu_3 - \mu_2 + \mu_1 = 0$$
+
+Which, rearranging to correctly order our treatments, gives:
+
+$$H_3: \mu_1 - \mu_2 - \mu_3 + \mu_4 = 0$$ In R, these three contrasts would be performed as follows:
+
+```{r}
+# fit the model
+barley_fit = lm(Yield ~ Superphosphate*Nitrolime, data = barley)
+
+(barley_emm = emmeans(barley_fit, ~ Superphosphate:Nitrolime))
+
+fac_contr = list('Main Effects Superphosphate' = c(-0.5,  0.5, -0.5, 0.5), 
+                 'Main Effects Nitrolime'      = c(-0.5, -0.5,  0.5, 0.5), 
+                 'P x N Interaction'           = c(   1,   -1,   -1,   1))
+contrast(barley_emm, fac_contr)
+```
+
+Note that the signs of the interaction coefficient match the product of the two main effects contrasts. In fact, rather than going through the algebra, we can use this to construct interaction contrasts by simpling multiplying two other contrasts together.
+
+Also note that, since this is a 2x2 factorial, there is only one contrast for each main effect and the interaction, but this will not be the case for experiments where some factor(s) has more than two levels. In these cases, it is often useful to combine class comparisons among the levels of one factor with interaction contrasts among them. It is in cases like this, and in the the case of specifying higher-order interaction contrasts, that it is especially helpful to be able to simply multiply together two previously specified contrasts and scale the results.
+
+**Rules for Interaction Contrasts**
+
+8)  Interaction contrasts can be specified by either assigning weights which represent the "difference in the differences" among treatments, or by multiplying together two sets of contrast coefficients and scaling the results so that the weights are all +1, -1 or 0.
+
+9)  In the presence of a significant interaction, the main effects estimates can no longer be interpreted as *the* effect of a treatment, and it becomes necessary to consider the simple effects (i.e. the effect of the treatment at specific levels of the other treatment) instead
+
+## Combining Class Comparisons and Interaction Contrasts
+
+Coming Soon!
+
+## Polynomial Contrasts
+
+Coming Soon!
+
+# References
+
+Saville, D. J., & Wood, G. R. (1991). *Statistical Methods: The Geometric Approach*. Springer Science & Business Media.
+
+
+
+
