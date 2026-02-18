@@ -338,7 +338,7 @@ fac_contr = list('Main Effects Superphosphate' = c(-0.5,  0.5, -0.5, 0.5),
 contrast(barley_emm, fac_contr)
 ```
 
-Note that the signs of the interaction coefficient match the product of the two main effects contrasts. In fact, rather than going through the algebra, we can use this to construct interaction contrasts by simpling multiplying two other contrasts together.
+Note that the signs of the interaction coefficient match the product of the two main effects contrasts. In fact, rather than going through the algebra, we can use this to construct interaction contrasts by simply multiplying two other contrasts together.
 
 Also note that, since this is a 2x2 factorial, there is only one contrast for each main effect and the interaction, but this will not be the case for experiments where some factor(s) has more than two levels. In these cases, it is often useful to combine class comparisons among the levels of one factor with interaction contrasts among them. It is in cases like this, and in the the case of specifying higher-order interaction contrasts, that it is especially helpful to be able to simply multiply together two previously specified contrasts and scale the results.
 
@@ -347,10 +347,6 @@ Also note that, since this is a 2x2 factorial, there is only one contrast for ea
 8)  Interaction contrasts can be specified by either assigning weights which represent the "difference in the differences" among treatments, or by multiplying together two sets of contrast coefficients and scaling the results so that the weights are all +1, -1 or 0.
 
 9)  In the presence of a significant interaction, the main effects estimates can no longer be interpreted as *the* effect of a treatment, and it becomes necessary to consider the simple effects (i.e. the effect of the treatment at specific levels of the other treatment) instead
-
-## Combining Class Comparisons and Interaction Contrasts
-
-Coming Soon!
 
 ## Polynomial Contrasts
 
