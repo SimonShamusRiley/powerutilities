@@ -25,7 +25,7 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-This vignette assumes you have already familiarized yourself with the basic operations of the "plug-in" approach to power analyis and the `powerutilities` package. If you have not, please refer to the "introduction-powerutilities" vignette.
+This vignette assumes you have already familiarized yourself with the basic operations of the "plug-in" approach to power analysis and the `powerutilities` package. If you have not, please refer to the "introduction-powerutilities" vignette.
 
 # Housekeeping
 
@@ -63,7 +63,7 @@ ex3b = ex3_trt_dict |>
   mutate(Ttl_Thrips = 5)
 ```
 
-Now, note that as discrete proportions, we will model this as binomial data, and the binomial distribution has no dispersion parameter: the variance is equal to *kp(1-p)*, which means its entirely determined by the proportion parameter, *p*, and the number of trials, *k*. This would seem to simplify the process of power estimation, since we have 1 less "plug-in" value to determine. However, we now also have the issue of a link function (here, the logit), which complicates the issue of specifying a block variance, since this is the variance on the logit scale. Where an investigator is required to rely on educated guesswork to find an appropriate plug-in value, it is highly recommended they employ some simulation to get a feel for what the implications of different block (or other random effect) variances have on the original scale. Here, we'll simply take the block variance as 0.3 (again, on the logit scale).
+Now, note that as discrete proportions, we will model this as binomial data, and the binomial distribution has no dispersion parameter: the variance is equal to *kp(1-p)*, which means its entirely determined by the proportion parameter, *p*, and the number of trials, *k*. This would seem to simplify the process of power estimation, since we have 1 less "plug-in" value to determine. However, we now also have the issue of a link function (here we are using the logit function, although the probit function is also a common choice for the binomial distribution), which complicates the issue of specifying a block variance, since this is the variance on the logit scale. Where an investigator is required to rely on educated guesswork to find an appropriate plug-in value, it is highly recommended to employ some simulation to get a feel for what the implications of different block (or other random effect) variances have on the original scale. Here, we'll simply take the block variance as 0.3 (again, on the logit scale).
 
 Fit the model to the data with fewer blocks and more thrips per plant:
 
@@ -90,13 +90,12 @@ ex3b_mod = glmmTMB(Mortality ~ Insecticide*Application + (1|Block),
                   map = list(theta = factor(c(NA))))
 VarCorr(ex3a_mod)
 ```
-
 Before proceeding any further with the power analysis, let's first examine the marginal means:
 
 ```{r}
 emmeans(ex3a_mod, ~Insecticide:Application, type = 'response')
 ```
-Why do these estimates not coincide with the ones we specified in the "treatment dictionary"? The answer lies in the fact that what we specified is *marginal* proportion, while what we are estimating in the *conditional* proportion. This distinction, and its implications for modeling and estimation, are both subtle and important. Unfortunately, they are beyond the scope of this current work. Interested readers (and you should all be interested) will find [Section 3.5 of Stroup, Ptukhina and Garai (2024)](https://www.taylorfrancis.com/chapters/mono/10.1201/9780429092060-4/setting-stage?context=ubx&refId=3b049c28-8737-47f7-b88a-f5b6ab094d14) an excellent jumping-off point for understanding this topic which does not arrise in either generalized linear mixed models or linear mixed models, but is distinct to general linearized mixed models.
+Why do these estimates not coincide with the ones we specified in the "treatment dictionary"? The answer lies in the fact that what we specified are the *marginal* proportions, while what we are estimating in this model are the *conditional* proportions. This distinction, and its implications for modeling and estimation, are both subtle and important. Unfortunately, they are beyond the scope of this current work. Interested readers (and you should all be interested) will find [Section 3.5 of Stroup, Ptukhina and Garai (2024)](https://www.taylorfrancis.com/chapters/mono/10.1201/9780429092060-4/setting-stage?context=ubx&refId=3b049c28-8737-47f7-b88a-f5b6ab094d14) an excellent jumping-off point for understanding this topic which does not arise in either generalized linear mixed models or linear mixed models, but is distinct to generalized linear mixed models.
 
 Now, turn to the power of the *F-*tests. First, we'll consider the calculated power when using asymptotic Wald tests. You will notice that the differences in power, which derive exclusively from the small variation in the estimated coefficients, are negligibly small. These Wald tests are the default when using `car::Anova()` or `emmeans::joint_tests`, but they are known to "anti-conservative", which means that they have a tendency to result in inflated type I error rates. 
 
@@ -136,7 +135,7 @@ left_join(pow_ex3a_con,
           pow_ex3b_con, 
           by = join_by(factor))
 ```
-These differences might not be huge, but its important to be aware of them. The take-home message is that **Wald $\chi^2$-tests and, equivalently, F-test with Inf denominator degrees of freedom provide, at best, an upper limit for your statistical power and, during actual testing, your p-values.**
+These differences might not be huge, but its important to be aware of them. The key message is that **Wald $\chi^2$-tests and, equivalently, F-test with Inf denominator degrees of freedom provide, at best, an upper limit for your statistical power and, during actual testing, a lower limit of your p-values.**
 
 Turning now to the contrasts, we start by calculating the marginal means for the models fit to each of our two candidate designs:
 
@@ -148,9 +147,7 @@ Turning now to the contrasts, we start by calculating the marginal means for the
 (ex3b_emm = emmeans(ex3b_mod, ~Insecticide:Application, type = 'response'))
 ```
 
-Next, we will focus on two constrasts specifically, not because they are necessarily very interseting in the context of our hypothetical study but because they highlight an additional complication that arrises specifically for generalized linear models and generalized linear mixed models which are not present for normal data. 
-
-The key item to remember when considering these two contrasts is that the difference between the treatments being compared is the same for both contrasts: 0.1.
+Next, we will focus on two contrasts specifically, not because they are necessarily very interesting in the context of our hypothetical study but because they highlight an additional complication that arises specifically for generalized linear models and generalized linear mixed models which are not present for normal data. In both of the tests below, we are comparing two treatments whose true means differ by 0.1: 
 
 ```{r}
 ex3_contr_list = list('Sesame Curative - Control' = c(-1, 0, 1, 0, 0, 0), 
@@ -161,9 +158,38 @@ ex3_contr_list = list('Sesame Curative - Control' = c(-1, 0, 1, 0, 0, 0),
 power_contrast(ex3a_emm, ex3_contr_list, ddf = 15)
 ```
 
-```{r}
-power_contrast(ex3b_emm, ex3_contr_list, ddf = 35)
-```
+In the first test, the two treatments are assumed to have mean (marginal) mortality rates of 0.15 and 0.05, respectively, and in the second test those two treatments are assumed to have mean (marginal) mortality rates of 0.25 and 0.15, respectively. Yet, even though the differences in the treatments is the same in both cases, the first test has power of 0.267 while the second has only 0.181! The reason for this is due to the fact that - because we have employed the logit link function specifically - it is not the *difference* in treatment means that is being tested by the *odds ratio*. The odds ratios are calculated by first taking the proportions and converting them to odds. For the treatments in the first test, this corresponds to:
+
+$$\frac{0.15}{1-0.15} = 0.176$$
+
+$$\frac{0.05}{1-0.05} = 0.053$$
+
+The ratio of these odds is then:
+
+$$\frac{0.176}{0.053} = 3.32$$
+Which is very similar to the value shown in the table above (for which the calculations are based on the conditional mean proportions). Repeating this exercise for the treatments in the second test yields:
+
+$$\frac{(\frac{0.25}{1-0.25})}{(\frac{0.15}{1-0.15})} = 1.89$$
+
+Which, again closely matches the value shown in the table. What this illustrates is that, **for GLMs and GLMMs employing the log or logit link functions, the values being tested via contrasts are ratios and odds ratios, respectively, which implies that power will be influenced not only the differences between treatment means but also by the value of those means themselves**.
+
+# Example 2: A Completely Randomized Design with Sub-sampling and Poisson Data
+
+Coming Soon!
+
+# Models Employing the Beta, Gamma, Negative Binomial, and Other Two-Parameter Distributions
+
+The previous examples assumed the data were characterized by one-parameter distributions: the binomial and the Poisson. In many other instances, however, our experimental data would be better characterized by two-parameter distributions other than the normal, such as the gamma distribution, beta distribution, negative binomial distribution, Tweedie distribution, etc. Unfortunately, `glmmTMB` does not yet support using `dispformula = ~ 0` for any of those distributions, which means that the plug-in approach demonstrated here cannot be used. Until that functionality is introduced, simulation may be the only available option. A number of R packages have been developed which have tools to assist in performing simulation based power analysis, included `simr`.  
+
+# References
+
+Ataide, L. M. S., Vargas, G., Velazquez-Hernandez, Y., Reyes-Arauz, I., Villamarin, P., Canon, M. A., Yang, X., Riley, S. S., & Revynthi, A. M. (2024). Efficacy of Conventional and Biorational Insecticides against the Invasive Pest Thrips parvispinus (Thysanoptera: Thripidae) under Containment Conditions. Insects, 15(1), Article 1. https://doi.org/10.3390/insects15010048
+
+Stroup, W. W., Ptukhina, M., & Garai, J. (2024). Generalized Linear Mixed Models: Modern Concepts, Methods and Applications (2nd ed.). Chapman and Hall/CRC. https://doi.org/10.1201/9780429092060
+
+
+
+
 
 
 
