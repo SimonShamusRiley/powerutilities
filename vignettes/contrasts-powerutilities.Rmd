@@ -12,7 +12,7 @@ vignette: >
 
 # Introduction
 
-The primary purpose of this vignette is to introduce contrasts to those who may not be familiar with them and to provide guidance on how to specify and use contrasts in R, specifically in the context of the `emmeans` package. Before we can get to contrasts, however, it is necessary to introduce estimated marginal means and to address a very frequently raised question about why/when they are preferable to simple arithemetic means.
+The primary purpose of this vignette is to introduce contrasts to those who may not be familiar with them and to provide guidance on how to specify and use contrasts in R, specifically in the context of the `emmeans` package. This is a prerequisite to being able to make sure of the tools in the `powerutilities` package, as it is through the specification and use of contrasts that we assess the power of specific tests. Before we can get to contrasts, however, it is necessary to introduce estimated marginal means and to address a very frequently raised question about why/when they are preferable to simple arithmetic means.
 
 # Estimated Marginal Means
 
