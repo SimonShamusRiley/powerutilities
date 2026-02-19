@@ -224,7 +224,7 @@ First, we can see that where the true difference is zero, we have power of 0.05,
 power_contrast(ex2_emm1, ex2_contr1, ddf = 45)
 ```
 
-Finally, for this example, we can see the tremendous flexability afforded by being able to calculate the power for any contrast we might wish to specify. Imagine, for example, we want to formally compare the slope of the nitrogen efffect in the Victoria and Golden Rain cultivars. First, we calculate the marginal means for all nitrogen and genotype combinations:
+Finally, for this example, we can see the tremendous flexibility afforded by being able to calculate the power for any contrast we might wish to specify. Imagine, for example, we want to formally compare the slope of the nitrogen effect in the Victoria and Golden Rain cultivars. First, we calculate the marginal means for all nitrogen and genotype combinations:
 
 ```{r}
 (ex2_emm2 = emmeans(ex2_mod, ~ nitro:gen))
@@ -249,6 +249,18 @@ power_contrast(ex2_emm2, ex2_contr2, ddf = 45)
 
 For those interested in learning more about the use of polynomial and other types of contrasts, I strongly recommend the articles by Pearce entitled "Data Analysis in Agricultural Experimentation" [Part I: Contrasts of Interest](https://www.doi.org/10.1017/S0014479700019840), [Part II: Some Standard Contrasts](https://www.doi.org/10.1017/S0014479700020081), and [Part III: Multiple Comparisons](https://www.doi.org/10.1017/S0014479700020354). 
 
-An additional vignette focused on the specification and use of contrasts in R will, hopefully, be forthcoming soon.
+For additional information on the specification and use of contrasts in R, see the following vignette:
+
+```{r, eval=FALSE}
+vignette('contrasts-powerutilities')
+```
+
+# References
+
+Piepho, H.-P., Gabriel, D., Hartung, J., Büchse, A., Grosse, M., Kurz, S., Laidig, F., Michel, V., Proctor, I., Sedlmeier, J. E., Toppel, K., & Wittenburg, D. (2022). One, two, three: Portable sample size in agricultural research. The Journal of Agricultural Science, 1–24. https://doi.org/10.1017/S0021859622000466
+
+Stroup, W. W., Ptukhina, M., & Garai, J. (2024). Generalized Linear Mixed Models: Modern Concepts, Methods and Applications (2nd ed.). Chapman and Hall/CRC. https://doi.org/10.1201/9780429092060
+
+Yates, F. (1935). Complex Experiments. Supplement to the Journal of the Royal Statistical Society, 2(2), 181–247. https://doi.org/10.2307/2983638
 
 
