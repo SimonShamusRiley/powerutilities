@@ -4,7 +4,6 @@
 
 #### Housekeeping ####
 # Install required packages
-# Install required packages
 install.packages('tidyverse')
 install.packages('devtools')
 install.packages('readxl')
