@@ -57,7 +57,6 @@ library(powerutilities)
 library(emmeans)
 ```
 
-
 # Example 1: A two-sample t-test
 
 To begin, lets consider the simplest example, in which we will establish an single factor experiment with two levels ('A' and 'B') arranged in a completely randomized design (CRD) with 8 replicates per treatment. Under these circumstances, we can actually skip the modeling stage and simply perform a two-sample t-test on this data, and for that we have tools in base R for performing power analysis. By simply leaving one of the arguments the set `n`, `delta`, `sd`, `sig.level` and `power` to the value `NULL`,  that value will be calculated on the basis of the other arguments provided. Thus, if we assume a residual standard deviation of 1.5 and a difference in treatment means of 3, then our power is 0.96 (which is excellent).
@@ -106,10 +105,10 @@ sigma(ex1_mod)
 On the basis of those results, we can calculate power of the F-test (i.e., ANOVA table) using the `power_ftest` function from the `powerutilities` package: 
 
 ```{r}
-power_ftest(ex1_mod, ddf = 'residual')
+power_ftest(ex1_mod, ddf = 'df.residual')
 ```
 
-Note first, that the power calculated here is identical to the one we got from the `power.t.test()` function. Also note that we had to set the `ddf` argument to "residual". We will return to this issue of denominator degrees of freedom later, but for now simply note that there are other choices, and the choice of how to calculate denominator DF will impact the results:
+Note first, that the power calculated here is identical to the one we got from the `power.t.test()` function. Also note that we had to set the `ddf` argument to "df.residual". We will return to this issue of denominator degrees of freedom later, but for now simply note that there are other choices, and the choice of how to calculate denominator DF will impact the results:
 
 ```{r}
 power_ftest(ex1_mod, ddf = 'asymptotic')
@@ -127,13 +126,18 @@ We then define our contrasts of interest as a named list, each item of which is 
 contr_list = list('Trt A - Trt B' = c(1, -1))
 ```
 
-And then use the `power_contrast` function from `powerutilities` to calculate the power of that test, again assuming the proposed study matched the fake model and data we defined earlier:
+And then use the `power_contrast` function from `powerutilities` to calculate the power of that test, again assuming the proposed study matched the fake model and data we defined earlier.
 
 ```{r}
-power_contrast(emm, contr_list, ddf = 14)
+power_contrast(emm, contr_list)
 ```
+Note that here the default, "asympotic", method for determining denominator degrees of freedom was used. If we wanted to use another method, it should be done when calculating the estimated marginal means:
 
-Note that here, again, we needed to define the denominator degrees of freedom, but this time as a numeric value (taken from the output of the call to `power_ftest`). Also note that for a comparison of two groups, the F-statistic is simply the square of the t-statistic, meaning that we can use F-tests both for the ANOVA above (which will work for factors with any number of levels) and for the contrast here (where we are only comparing two means or two groups of means at a time). Naturally, for a factor containing only two levels, the results of the two tests are identical.
+```{r}
+emm = emmeans(ex1_mod, ~Trt, ddf = 'df.residual') 
+power_contrast(emm, contr_list)
+```
+Also note that for a comparison of two groups, the F-statistic is simply the square of the t-statistic, meaning that we can use F-tests both for the ANOVA above (which will work for factors with any number of levels) and for the contrast here (where we are only comparing two means or two groups of means at a time). Naturally, for a factor containing only two levels, the results of the two tests are identical.
 
 We've now seen that for this simple example the "plug-in" method produces the same results as the basic power equations do. However, this "plug-in" approach will also work for basically any design or model we can think of. 
 
@@ -199,16 +203,16 @@ ex2_mod = glmmTMB(yield ~ gen*nitro + (1|block/gen), data = ex2,
 VarCorr(ex2_mod) # It worked
 ```
 
-And we can now assess the power of the F-tests associated with our proposed study. Here, however, we set denominator degrees of freedom to 'containment', which is appropriate for cases of a  balanced (or nearly balanced) experimental design entailing splits or strips. We can see that we have very high power for detecting effect of nitrogen, but very low power for detecting either the main effect of genotype and for the genotype:nitro interaction.
+And we can now assess the power of the F-tests associated with our proposed study. Here, however, we set denominator degrees of freedom to 'kenward-roger', which reduces to the classical "containment" method in the balanced split-plot example, but which is broadly applicable to a range of different experimental designs containing nesting structures. We can see that we have very high power for detecting effect of nitrogen, but very low power for detecting either the main effect of genotype and for the genotype:nitro interaction.
 
 ```{r}
-power_ftest(ex2_mod, ddf = 'containment')
+power_ftest(ex2_mod, ddf = 'kenward-roger')
 ```
 
 For the sake of illustration, let us imagine that Victory is something of a "standard" cultivar which we want to use as a reference or control. Let us suppose then that we are interested in comparing the performance of Golden Rain and Marvellous against the performance of Victory separately at each nitrogen level. To do this, we first calculate our marginal means for each genotype while using nitro as a grouping variable (via the "|" operator):
 
 ```{r}
-(ex2_emm1 = emmeans(ex2_mod, ~ gen|nitro))
+(ex2_emm1 = emmeans(ex2_mod, ~ gen|nitro, ddf = 'kenward-roger'))
 ```
 
 We can then define our contrasts only in terms of genotype, and these contrasts are then automatically applied to each level of the grouping factor:
@@ -221,13 +225,13 @@ ex2_contr1 = list('Golden - Victory' = c(1, 0, -1),
 First, we can see that where the true difference is zero, we have power of 0.05, which makes sense, since this is the false positive rate alpha! However, we can also see that a true difference of only 100kg/ha, given the magnitude of the variation among plots, blocks, etc., is very low at just above 0.08. Even more concerning, note that even for the pairwise comparison with the greatest difference (Golden - Victory @ 60 nitro) the power is still very low, at only about 12.5%. If such comparisons were the primary objectives of the study and we had no way to increase the sample size, we would be forced to seriously consider whether such an experiment was worth the investment.
 
 ```{r}
-power_contrast(ex2_emm1, ex2_contr1, ddf = 45)
+power_contrast(ex2_emm1, ex2_contr1)
 ```
 
-Finally, for this example, we can see the tremendous flexibility afforded by being able to calculate the power for any contrast we might wish to specify. Imagine, for example, we want to formally compare the slope of the nitrogen effect in the Victoria and Golden Rain cultivars. First, we calculate the marginal means for all nitrogen and genotype combinations:
+Finally, for this example, we can see the tremendous flexability afforded by being able to calculate the power for any contrast we might wish to specify. Imagine, for example, we want to formally compare the slope of the nitrogen efffect in the Victoria and Golden Rain cultivars. First, we calculate the marginal means for all nitrogen and genotype combinations:
 
 ```{r}
-(ex2_emm2 = emmeans(ex2_mod, ~ nitro:gen))
+(ex2_emm2 = emmeans(ex2_mod, ~ nitro:gen, ddf = 'kenward-roger'))
 ```
 
 We can then use the `poly()` function to calculate the appropriate coefficients for polynomial contrasts (here we'll only consider differences in the linear trend, but we could fairly easily use the same approach to test for differences in quadratic and higher order trends):
@@ -244,23 +248,10 @@ ex2_contr2 = list('Slope Vic - Slope Golden' = c(+0.671, +0.224, -0.224, -0.671,
 And we now have the power for a test of the difference in these two slopes:
 
 ```{r}
-power_contrast(ex2_emm2, ex2_contr2, ddf = 45)
+power_contrast(ex2_emm2, ex2_contr2)
 ```
 
 For those interested in learning more about the use of polynomial and other types of contrasts, I strongly recommend the articles by Pearce entitled "Data Analysis in Agricultural Experimentation" [Part I: Contrasts of Interest](https://www.doi.org/10.1017/S0014479700019840), [Part II: Some Standard Contrasts](https://www.doi.org/10.1017/S0014479700020081), and [Part III: Multiple Comparisons](https://www.doi.org/10.1017/S0014479700020354). 
 
-For additional information on the specification and use of contrasts in R, see the following vignette:
-
-```{r, eval=FALSE}
-vignette('contrasts-powerutilities')
-```
-
-# References
-
-Piepho, H.-P., Gabriel, D., Hartung, J., Büchse, A., Grosse, M., Kurz, S., Laidig, F., Michel, V., Proctor, I., Sedlmeier, J. E., Toppel, K., & Wittenburg, D. (2022). One, two, three: Portable sample size in agricultural research. The Journal of Agricultural Science, 1–24. https://doi.org/10.1017/S0021859622000466
-
-Stroup, W. W., Ptukhina, M., & Garai, J. (2024). Generalized Linear Mixed Models: Modern Concepts, Methods and Applications (2nd ed.). Chapman and Hall/CRC. https://doi.org/10.1201/9780429092060
-
-Yates, F. (1935). Complex Experiments. Supplement to the Journal of the Royal Statistical Society, 2(2), 181–247. https://doi.org/10.2307/2983638
 
 
