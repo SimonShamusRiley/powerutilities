@@ -180,3 +180,13 @@ print.powertable = function(x, digits = 1, pdigits = 4, ...){
   
   cat(paste0('\nDegrees-of-freedom method: ', attr(x, 'ddf'), '\n\u03B1 = ', attr(x, 'alpha')))
 }
+
+#' @exportS3Method knitr::knit_print
+knit_print.powertable = function(x, ...) {
+  out <- paste(capture.output(print.powertable(x, ...)), collapse = "\n")
+  if (knitr::is_html_output()) {
+    knitr::asis_output(paste0("<pre>", out, "</pre>"))
+  } else {
+    knitr::asis_output(paste0("\n```\n", out, "\n```\n"))
+  }
+}
