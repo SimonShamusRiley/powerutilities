@@ -4,23 +4,46 @@
 \alias{power_ftest}
 \title{Statistical Power of F-tests Performed on Models Fit with glmmTMB}
 \usage{
-power_ftest(mod, ddf = "containment", type = 2, alpha = 0.05)
+power_ftest(mod, ddf = "kenward-roger", alpha = 0.05)
 }
 \arguments{
 \item{mod}{A \code{\link{glmmTMB}} model}
 
-\item{ddf}{Method for calculating denominator degrees of freedom: containment
-(default), pinheiro-bates, satterthwaite, or asymptotic.}
-
-\item{type}{Either 2 (default) or 3 (note that roman or arabic numerals are
-accepted). Type II tests each term after testing all other non-higher-order
-terms, whereas type III tests each term after all others, including
-higher-order terms.}
+\item{ddf}{Method for calculating denominator degrees of freedom
+('kenward-roger' (default), 'df.residual', or 'asymptotic') or else
+a numeric vector of DF values.}
 
 \item{alpha}{The nominal type I error rate. Defaults to 0.05.}
 }
 \description{
 This function calculates the power of F-tests for each fixed
 effect term in the model using one of several methods for determining the
-denominator degrees of freedom |>
+denominator degrees of freedom.
+}
+\examples{
+#' 
+# Power analysis in a split-plot RCBD experiment on oat yield
+oats = agridat::yates.oats |> 
+       dplyr::mutate(dplyr::across(nitro, factor))
+
+# All random effects are arbitrarily given standard deviations of 10
+oat_mod = glmmTMB(yield ~ gen*nitro + (1|block/gen), 
+                  data = oats, 
+                  REML = T, 
+                  dispformula = ~0, 
+                  start = list(theta = c(log(c(10, 10)))),
+                  map = list(theta = factor(c(NA, NA))), 
+                  control = glmmTMBControl(zerodisp_val = log(10))) 
+                  
+# In a perfectly balanced case, Kenward-Roger produces the same denominator
+# degrees of freedom as the classical containment method
+power_ftest(oat_mod, ddf = 'kr') 
+
+# Residual degrees of freedom, appropriate for non-nested designs, is 
+# anti-conservative
+power_ftest(oat_mod, ddf = 'df.residual')  
+
+# Wald-type asympotic tests are the most anti-conservative
+power_ftest(oat_mod, ddf = 'asymptotic')                     
+                  
 }

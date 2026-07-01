@@ -4,21 +4,43 @@
 \alias{power_contrast}
 \title{Power of Contrasts Performed on Models Fit with glmmTMB}
 \usage{
-power_contrast(emm, contr_list, ddf, alpha = 0.05)
+power_contrast(emm, contr_list, alpha = 0.05)
 }
 \arguments{
 \item{emm}{An emmGrid object associated with a \code{\link{glmmTMB}} model.}
 
 \item{contr_list}{A named list of contrasts specifications.}
 
-\item{ddf}{Numeric. The value to use for the denominator degrees of freedom.
-Should probably correspond to the value returned from a call to
-power_ftest.}
-
 \item{alpha}{The nominal type I error rate. Defaults to 0.05.}
 }
 \description{
-This function calculates the power of F-tests for each fixed
-effect term in the model using one of several methods for determining the
-denominator degrees of freedom |>
+This function calculates the power of contrasts.
+}
+\examples{
+# Power analysis in a split-plot RCBD experiment on oat yield
+oats = agridat::yates.oats |> 
+       dplyr::mutate(dplyr::across(nitro, factor))
+
+# All random effects are arbitrarily given standard deviations of 10
+oat_mod = glmmTMB(yield ~ gen*nitro + (1|block/gen), 
+                  data = oats, 
+                  REML = T, 
+                  dispformula = ~0, 
+                  start = list(theta = c(log(c(10, 10)))),
+                  map = list(theta = factor(c(NA, NA))), 
+                  control = glmmTMBControl(zerodisp_val = log(10))) 
+
+# Here, the denominator DF are determined when EMMs are calculated:
+(oat_emm = emmeans(oat_mod, ~ gen, ddf = 'kenward-roger'))
+
+contr = list('GoldenRain vs Others' = c(1, -0.5, -0.5))
+
+power_contrast(oat_emm, contr)             
+
+# With manually specified denominator DFs (note that the argument
+# is not `ddf =`, but `df =`)
+(oat_emm2 = emmeans(oat_mod, ~ gen, df = 12))
+
+power_contrast(oat_emm2, contr)  
+                  
 }

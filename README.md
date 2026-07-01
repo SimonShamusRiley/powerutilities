@@ -46,7 +46,7 @@ You can install the development version of powerutilities from
 ``` r
 install.packages("devtools")
 devtools::install_github('SimonShamusRiley/powerutilities', 
-                         build_vignettes = T)
+                          build_vignettes = T)
 ```
 
 
