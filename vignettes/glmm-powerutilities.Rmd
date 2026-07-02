@@ -1,26 +1,21 @@
 ---
 title: "Power and Planning for Generalized Linear Mixed Models"
 output: 
-  rmarkdown::html_vignette:
+  emmeans::.emm_vignette:
     toc: yes
-    df_print: kable
 vignette: >
   %\VignetteIndexEntry{Power and Planning for Generalized Linear Mixed Models}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
-```{css, echo=FALSE}
-body {
-  font-size: 18px;
-  line-height: 1.15;
-}
-```
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
-  collapse = FALSE,
-  comment = "#>" 
+  collapse = FALSE, 
+  comment = '#>'
 )
+
+options(width = 200)
 ```
 
 # Introduction

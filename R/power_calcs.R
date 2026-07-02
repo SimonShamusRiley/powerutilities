@@ -68,13 +68,13 @@ power_ftest = function(mod, ddf = 'kenward-roger', alpha = 0.05){
   
   pow = jt |>
     as.data.frame() |>
-    dplyr::rename(Model_Term = `model term`, Num_DF = df1, Den_DF = df2,
-                  F_ratio = F.ratio, P_value = p.value) |> 
-    dplyr::mutate(NC_param = F_ratio*Num_DF,
-                  F_crit = qf(1-alpha, Num_DF, Den_DF, 0),
-                  Power = 1-pf(F_crit, Num_DF, Den_DF, ncp = NC_param)) |>
-    dplyr::select(Model_Term, Num_DF, Den_DF,
-                  F_ratio, F_crit, P_value, Power)
+    dplyr::rename(Term = `model term`, NumDF = df1, DenDF = df2,
+                  Fval = F.ratio, Pval = p.value) |> 
+    dplyr::mutate(NC_param = Fval*NumDF,
+                  Fcrit = qf(1-alpha, NumDF, DenDF, 0),
+                  Power = 1-pf(Fcrit, NumDF, DenDF, ncp = NC_param)) |>
+    dplyr::select(Term, NumDF, DenDF,
+                  Fval, Fcrit, Pval, Power)
   attr(pow, 'alpha') = alpha
   attr(pow, 'ddf') = ifelse(inherits(ddf, 'character'), ddf,
                             'user-specified')
@@ -88,7 +88,7 @@ power_ftest = function(mod, ddf = 'kenward-roger', alpha = 0.05){
 #' @description This function calculates the power of contrasts.
 #'
 #' @param emm An emmGrid object associated with a \code{\link{glmmTMB}} model.
-#' @param contr_list A named list of contrasts specifications.
+#' @param contr_list A named list of contrast specifications.
 #' @param alpha The nominal type I error rate. Defaults to 0.05.
 #' @examples
 #' # Power analysis in a split-plot RCBD experiment on oat yield
@@ -130,15 +130,15 @@ power_contrast = function(emm, contr_list, alpha = 0.05){
     as.data.frame() |> 
     dplyr::rename_with(~ dplyr::if_else(. == "z.ratio", "t.ratio", .),
                        .cols = everything()) |> 
-    dplyr::mutate(Num_DF = 1, 
-                  Den_DF = df, 
-                  F_ratio = t.ratio^2, 
-                  NC_param = F_ratio*Num_DF, 
-                  F_crit = qf(1-alpha, Num_DF, Den_DF, 0),
-                  Power = 1-pf(F_crit, Num_DF, Den_DF, ncp = NC_param)) |> 
-    dplyr::rename(P_value = p.value, Contrast = contrast) |> 
-    dplyr::select(Contrast:SE, Num_DF, Den_DF,  
-                  F_ratio, F_crit, P_value, Power) 
+    dplyr::mutate(NumDF = 1, 
+                  DenDF = df, 
+                  Fval = t.ratio^2, 
+                  NC_param = Fval*NumDF, 
+                  Fcrit = qf(1-alpha, NumDF, DenDF, 0),
+                  Power = 1-pf(Fcrit, NumDF, DenDF, ncp = NC_param)) |> 
+    dplyr::rename(Pval = p.value, Contrast = contrast) |> 
+    dplyr::select(Contrast:SE, NumDF, DenDF,  
+                  Fval, Fcrit, Pval, Power) 
   
   attr(con, 'alpha') = alpha
   ddf = switch(deparse(emm@dffun)[2], 
@@ -171,9 +171,9 @@ print.powertable = function(x, digits = 1, pdigits = 4, ...){
   
   out = x |>
     dplyr::mutate(Power  = sprintf(paste0('%.', pdigits, 'f '), Power),
-                  P_value = ifelse(P_value < 10^(-pdigits),
+                  Pval = ifelse(Pval < 10^(-pdigits),
                                    paste0('<.', paste(rep('0', pdigits - 1), collapse = ''), '1'),
-                                   sprintf(paste0('%.', pdigits, 'f'), P_value)),
+                                   sprintf(paste0('%.', pdigits, 'f'), Pval)),
                   across(where(is.numeric), ~sprintf(paste0('%.', digits, 'f'), .)))
   
   print.data.frame(out)

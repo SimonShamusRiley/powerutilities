@@ -1,27 +1,22 @@
 ---
 title: 'Introduction to the "Plug-In" Method of Power Analysis in R'
 output: 
-  rmarkdown::html_vignette:
+  emmeans::.emm_vignette:
     toc: yes
-    df_print: kable
 vignette: >
   %\VignetteIndexEntry{Introduction to the "Plug-In" Method of Power Analysis in R}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
-```{css, echo=FALSE}
-body {
-  font-size: 18px;
-  line-height: 1.15;
-}
-```
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = FALSE, 
   comment = '#>'
 )
+
+options(width = 200)
 ```
 
 # Introduction
