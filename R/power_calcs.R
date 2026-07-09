@@ -88,8 +88,13 @@ power_ftest = function(mod, ddf = 'kenward-roger', alpha = 0.05){
 #' @description This function calculates the power of contrasts.
 #'
 #' @param emm An emmGrid object associated with a \code{\link{glmmTMB}} model.
-#' @param contr_list A named list of contrast specifications.
-#' @param alpha The nominal type I error rate. Defaults to 0.05.
+#' @param contr_list A (named) list of contrast specifications.
+#' @param alpha  Numeric. The nominal type I error rate. Defaults to 0.05.
+#' @param n_sims Numeric. The number of simulations to use for calculating
+#'               type M error rate. If set to zero, the closed form, asymptotic
+#'               calculations are used.
+#' @param ... Other arguments passed to emmeans::contrast.         
+#' 
 #' @examples
 #' # Power analysis in a split-plot RCBD experiment on oat yield
 #' oats = agridat::yates.oats |> 
@@ -118,15 +123,48 @@ power_ftest = function(mod, ddf = 'kenward-roger', alpha = 0.05){
 #' power_contrast(oat_emm2, contr)  
 #'                   
 #' @export
-power_contrast = function(emm, contr_list, alpha = 0.05){
+power_contrast = function(emm, contr_list, alpha = 0.05, n_sims = 1e4, ...){
   require(glmmTMB)
   require(emmeans)
+  require(retrodesign)
   
   if (!inherits(emm, 'emmGrid')){
     stop(simpleError('"emm" must be the result of a call to emmeans()'))
   } 
+  if (!inherits(alpha, 'numeric') | alpha > 1 | alpha < 0){
+    stop(simpleError('alpha must be a numeric value between 0 and 1'))
+  }
+  if (!inherits(n_sims, 'numeric') | n_sims < 0){
+    stop(simpleError('n_sims must be a non-negative numeric value'))
+  }
   
-  con = emmeans::contrast(emm, contr_list) |> 
+  dots = list(...)
+  
+  if ('ratios' %in% names(dots)){
+    message(simpleMessage('Setting `ratios = FALSE`: power calculations must be performed on the link scale.'))
+    dots = dots[which(names(dots) != 'ratios')]
+  }
+  
+  if ('null' %in% names(dots)){
+    message(simpleMessage('Setting `null = 0`: powerutilities does not yet support non-zero null hypotheses.'))
+    dots$null = 0
+  }
+  
+  if ('predict.type' %in% names(emm@misc)){
+    if (emm@misc$predict.type != 'emmeans'){
+    message(simpleMessage('Setting `type = "emmeans"`: power calculations must be performed on the link scale.'))
+    emm = update(emm, type = 'emmeans')
+    }
+  }
+  
+  capwords <- function(s, strict = FALSE) {
+    cap <- function(s) paste(toupper(substring(s, 1, 1)),
+                             {s <- substring(s, 2); if(strict) tolower(s) else s},
+                             sep = "", collapse = " " )
+    sapply(strsplit(s, split = " "), cap, USE.NAMES = !is.null(names(s)))
+  }
+
+  con = do.call(emmeans::contrast, c(list(emm, contr_list, ratios = FALSE), dots)) |> 
     as.data.frame() |> 
     dplyr::rename_with(~ dplyr::if_else(. == "z.ratio", "t.ratio", .),
                        .cols = everything()) |> 
@@ -136,11 +174,29 @@ power_contrast = function(emm, contr_list, alpha = 0.05){
                   NC_param = Fval*NumDF, 
                   Fcrit = qf(1-alpha, NumDF, DenDF, 0),
                   Power = 1-pf(Fcrit, NumDF, DenDF, ncp = NC_param)) |> 
-    dplyr::rename(Pval = p.value, Contrast = contrast) |> 
+    dplyr::rename_with(capwords, .cols = 1:SE) |> 
+    dplyr::rename(Pval = p.value) |> 
     dplyr::select(Contrast:SE, NumDF, DenDF,  
                   Fval, Fcrit, Pval, Power) 
   
-  attr(con, 'alpha') = alpha
+  if (n_sims == 0){
+    more_errs = with(con, mapply(retrodesign::retro_design_closed_form,
+                                 A = Estimate, s = SE,
+                                 MoreArgs = list(alpha = alpha))) 
+  } else {
+    more_errs = with(con, mapply(retrodesign::retrodesign, 
+                                 A = Estimate, s = SE,
+                                 df = DenDF, n.sims = n_sims,
+                                 MoreArgs = list(alpha = alpha))) 
+  }
+   
+  con$TypeS  = unlist(more_errs['type_s', ])
+  con$TypeM = unlist(more_errs['type_m', ])
+  
+  out = con |> 
+    mutate(TypeM = ifelse(abs(Estimate) < 1.5e-8, Inf, TypeM))
+  
+  attr(out, 'alpha') = alpha
   ddf = switch(deparse(emm@dffun)[2], 
                "pbkrtest::Lb_ddf(k, dfargs$unadjV, dfargs$adjV)" = 'kenward-roger', 
                'Inf' = 'asymptotic', 
@@ -150,10 +206,10 @@ power_contrast = function(emm, contr_list, alpha = 0.05){
     ddf = 'user-specified'
   }
   
-  attr(con, 'ddf') = ddf
+  attr(out, 'ddf') = ddf
   
-  class(con) = c('powertable', 'data.frame')
-  return(con)
+  class(out) = c('powertable', 'data.frame')
+  return(out)
 }
 
 #' @title Print the results of a power analysis
@@ -167,13 +223,16 @@ power_contrast = function(emm, contr_list, alpha = 0.05){
 #' @param pdigits Integer. The number of digits to print for the p-value and 
 #' power columns
 #' @export
-print.powertable = function(x, digits = 1, pdigits = 4, ...){
+print.powertable = function(x, digits = 1, pdigits = getOption('pdigits', default = 4), ...){
+  
+  fmt_like_pval = function(p) {
+    ifelse(p < 10^(-pdigits),
+           paste0('<.', paste(rep('0', pdigits - 1), collapse = ''), '1'),
+           sprintf(paste0('%.', pdigits, 'f'), p))
+  }
   
   out = x |>
-    dplyr::mutate(Power  = sprintf(paste0('%.', pdigits, 'f '), Power),
-                  Pval = ifelse(Pval < 10^(-pdigits),
-                                   paste0('<.', paste(rep('0', pdigits - 1), collapse = ''), '1'),
-                                   sprintf(paste0('%.', pdigits, 'f'), Pval)),
+    dplyr::mutate(dplyr::across(dplyr::any_of(c('Pval', 'Power', 'TypeS')), fmt_like_pval),
                   across(where(is.numeric), ~sprintf(paste0('%.', digits, 'f'), .)))
   
   print.data.frame(out)

@@ -35,21 +35,13 @@ The origins of the approach to power analysis employed here, which [Piepho et al
 
 # Housekeeping
 
-If you have not yet done so already, the `powerutilities` package must be installed from Github (this only needs to be done once, unless you have updated R itself, or you want to update the package):
-
-```{r, eval = FALSE}
-install.packages('devtools')
-devtools::install_github('SimonShamusRiley/powerutilities', force = T, 
-                         build_vignettes = TRUE, dependencies = TRUE)
-```
-
-Then load it along with all of the other required packages:
+To begin, load the required packages:
 
 ```{r, warning=F, message=F}
 library(tidyverse)
 library(glmmTMB)
-library(powerutilities)
 library(emmeans)
+library(powerutilities)
 ```
 
 # Example 1: A two-sample t-test
@@ -126,13 +118,15 @@ And then use the `power_contrast` function from `powerutilities` to calculate th
 ```{r}
 power_contrast(emm, contr_list)
 ```
-Note that here the default, "asympotic", method for determining denominator degrees of freedom was used. If we wanted to use another method, it should be done when calculating the estimated marginal means:
+Note that here the default, "asymptotic", method for determining denominator degrees of freedom was used, and their is a corresponding discrepancy between these results and those of the earlier power analyses. We can rectify this by simply using the "df.residual" method for calculating denominator degrees of freedom when calculating the estimated marginal means:
 
 ```{r}
 emm = emmeans(ex1_mod, ~Trt, ddf = 'df.residual') 
 power_contrast(emm, contr_list)
 ```
 Also note that for a comparison of two groups, the F-statistic is simply the square of the t-statistic, meaning that we can use F-tests both for the ANOVA above (which will work for factors with any number of levels) and for the contrast here (where we are only comparing two means or two groups of means at a time). Naturally, for a factor containing only two levels, the results of the two tests are identical.
+
+This output also gives us two additional metrics for assessing power: the "type S" error rate and the "type M" error rate. The former is the probability that a statistically significant result would have the wrong sign, while the latter is "exaggeration ratio": the expected ration between a statistically significant result and the true value. Further details on the measures can be found in Gelman & Carlin [-@gelmanPowerCalculationsAssessing2014].
 
 We've now seen that for this simple example the "plug-in" method produces the same results as the basic power equations do. However, this "plug-in" approach will also work for basically any design or model we can think of. 
 
@@ -175,7 +169,7 @@ ex2_des_df = data.frame(block = factor(1:nblk))
 ex2_des_df
 ```
 
-Using the `merge` function will then replicate the whole treatment dictiorary for every row (i.e., block) in our design data frame:
+Using the `merge` function will then replicate the whole treatment dictionary for every row (i.e., block) in our design data frame:
 
 ```{r}
 ex2 = merge(ex2_trt_dict, ex2_des_df)
@@ -223,7 +217,7 @@ First, we can see that where the true difference is zero, we have power of 0.05,
 power_contrast(ex2_emm1, ex2_contr1)
 ```
 
-Finally, for this example, we can see the tremendous flexability afforded by being able to calculate the power for any contrast we might wish to specify. Imagine, for example, we want to formally compare the slope of the nitrogen efffect in the Victoria and Golden Rain cultivars. First, we calculate the marginal means for all nitrogen and genotype combinations:
+Finally, for this example, we can see the tremendous flexibility afforded by being able to calculate the power for any contrast we might wish to specify. Imagine, for example, we want to formally compare the slope of the nitrogen effect in the Victoria and Golden Rain cultivars. First, we calculate the marginal means for all nitrogen and genotype combinations:
 
 ```{r}
 (ex2_emm2 = emmeans(ex2_mod, ~ nitro:gen, ddf = 'kenward-roger'))
@@ -234,13 +228,14 @@ We can then use the `poly()` function to calculate the appropriate coefficients 
 ```{r}
 poly(c(0, 0.2, 0.4, 0.6), degree = 1)[, 1]
 ```
-With a bit of algebra, we use these to work out the coefficients corresponding to the differences between the two slopes, and arrive at:
+We can use these coefficients to test whether a particular slope is statistically significant or, with a bit of algebra, to work out the coefficients corresponding to the *differences* between the two slopes:
 
 ```{r}
-ex2_contr2 = list('Slope Vic - Slope Golden' = c(+0.671, +0.224, -0.224, -0.671, 0, 0, 0, 0, -0.671, -0.224, +0.224, +0.671))
+ex2_contr2 = list('Slope Vic ≠ 0' = c(-0.671, -0.224,  0.224,  0.671, 0, 0, 0, 0, 0, 0, 0, 0), 
+                  'Slope Vic - Slope Golden' = c(+0.671, +0.224, -0.224, -0.671, 0, 0, 0, 0, -0.671, -0.224, +0.224, +0.671))
 ```
 
-And we now have the power for a test of the difference in these two slopes:
+And we now have the power for these two tests regarding the response trend:
 
 ```{r}
 power_contrast(ex2_emm2, ex2_contr2)
@@ -248,5 +243,125 @@ power_contrast(ex2_emm2, ex2_contr2)
 
 For those interested in learning more about the use of polynomial and other types of contrasts, I strongly recommend the articles by Pearce entitled "Data Analysis in Agricultural Experimentation" [Part I: Contrasts of Interest](https://www.doi.org/10.1017/S0014479700019840), [Part II: Some Standard Contrasts](https://www.doi.org/10.1017/S0014479700020081), and [Part III: Multiple Comparisons](https://www.doi.org/10.1017/S0014479700020354). 
 
+# Example 3: Comparing Linear Trends in a Split-Split-Plot RCBD
 
+In the previous example we saw how polynomial contrasts can be used to test for slopes or for differences in slopes, and in turn how we can calculate the power of such tests. A more natural approach to this, however, is to model and compare these linear trends directly, using an ANCOVA-type model with both categorical and continuous predictors. This example is inspired by an experiment, reported in Gomez and Gomez (1984, p. 143), on rice response to nitrogen fertilization under three different management practices/intensitites. In contrast to the original study, both the yield and nitrogen application rates will be expressed as tons/ha in order to somewhat simplify the interpretation of the results. To start, we define our treatment structure:
+
+```{r}
+ex3_trt_dict = expand.grid(Management = factor(c('1 Minimal', '2 Optimal', '3 Excessive')), 
+                           Nitrogen = c(0, 0.050, 0.080, 0.110, 0.140), 
+                           Cultivar = factor(c('V1', 'V2', 'V3'))) |> 
+  arrange(Management, Cultivar, Nitrogen)
+```
+
+We then need to assign each of the 45 treatment combinations an expected yield. To simplify somewhat, we'll instead create formulae (intercept + slope * n_rate_vector) for the 9 combinations of management and cultivar:
+
+```{r}
+nrates = c(0, 0.050, 0.080, 0.110, 0.140)
+ex3_trt_dict$Yield = c(4 + 3*nrates,  # Low management Cultivar 1  
+                       4 + 8*nrates,  # Low management Cultivar 2
+                       4 + 15*nrates, # ...
+                       5 + 8*nrates,  # 
+                       5 + 15*nrates, # 
+                       5 + 20*nrates, # 
+                       5 + 5*nrates,  # 
+                       5 + 17*nrates, #
+                       5 + 18*nrates) # Excessive management Cultivar 3
+```
+
+Finally, this gets merged with a data set containing the design information. We'll assume 3 blocks. Nitrogen rate will be treated as a main-plot factor and management applied as a sub-plot factor, in keeping with the original experiment, but this does not need to enter our "design" data frame:
+
+```{r}
+nblk = 3
+ex3_des_dict = data.frame(Block = factor(1:nblk))
+
+ex3 = ex3_trt_dict |> 
+  merge(ex3_des_dict) |> 
+  relocate(Block, .before = Management)
+str(ex3)
+```
+Fitting the model is exactly the same as in the previous example:
+
+```{r}
+ex3_mod = glmmTMB(Yield ~ Block + Management*Cultivar*Nitrogen + 
+                    (1|Block:Nitrogen) + (1|Block:Nitrogen:Management), 
+                  data = ex3, REML = T,
+                  dispformula = ~ 0,
+                  start = list(theta = log(c(0.25, 0.01))), 
+                  map = list(theta = factor(c(NA, NA))), 
+                  control = glmmTMBControl(zerodisp_val = log(0.6)))
+VarCorr(ex3_mod)
+```
+We can confirm that nitrogen is being treated as a continuous covariate since it only has 1 numerator degree of freedom, whereas if it were a categorical variable the numerator degrees of freedom would be one less than the number of levels for that factor (which in this example would be 5 - 1 = 4). We can also see that in this example we have very high power for the 3 main effects, as well as for the cultivar x nitrogen interaction, but low power for the other interactions.
+
+```{r}
+power_ftest(ex3_mod, ddf = 'kenward-roger')
+```
+To calculate the estimated marginal trends, we use the `emtrends` function:
+
+```{r}
+(ex3_emt = emtrends(ex3_mod, ~ Cultivar, var = 'Nitrogen', ddf = 'kenward-roger'))
+```
+
+We can then use the `power_contrasts` function to assess the power of those tests in exactly the same way as for contrasts involving group or treatment means. 
+
+```{r}
+ex3_contr_list = list('V2 slope - V1 slope' = c(-1, 1, 0), 
+                      'V3 slope - V2 slope' = c(-1, 0, 1))
+
+power_contrast(ex3_emt, ex3_contr_list)
+```
+#Example 4: Power in a Repeated Measures Study
+
+In this example we will imagine a study examining yield in different apple cultivars in the context of pronounced biennial bearing: individual trees alternate between overproduction and underproduction, or what we might think of as negative temporal autocorrelation. We are interested in comparing average yields of two cultivars, and want to better understand how the level of biennial bearing might effect our ability to detect differences.
+
+```{r}
+ex4 = expand.grid(Species = c("Honeycrisp", "Fuji"), 
+                  TreeNum = 1:10, 
+                  Year = 1:3) |> 
+  mutate(TreeID = interaction(Species, TreeNum,
+                              sep = '-', lex.order = F), 
+         Yield = case_when(Species == 'Honeycrisp' ~ 40, 
+                         .default = 35), 
+         Yield = case_when(Year == 1 ~ Yield + 5, 
+                           Year == 3 ~ Yield - 5, 
+                           .default = Yield)) |> 
+  arrange(Species, TreeID, Year) 
+head(ex4)
+```
+
+
+```{r}
+phi = -0.5
+theta = phi/sqrt(1-phi^2)
+
+ex4_mod = glmmTMB(Yield ~ Species*Year+ar1(factor(Year)+0|TreeID), 
+                  data = ex4, REML = T, 
+                  dispformula = ~ 0,
+                  start = list(theta = c(log(10), theta)), 
+                  map = list(theta = factor(c(NA, NA))), 
+                  control = glmmTMBControl(zerodisp_val = log(sqrt(144-100))))
+VarCorr(ex4_mod)
+```
+
+
+```{r}
+ex4$Yield_sim = simulate(ex4_mod)[, 1]
+ggplot(ex4, aes(x = Year, y = Yield_sim,
+                color = Species, group = TreeID)) +
+  geom_point()+
+  geom_line()
+```
+
+```{r}
+joint_tests(ex4_mod, ddf = 'kenward-roger')
+```
+```{r}
+(ex4_emm = emmeans(ex4_mod, ~ Species, 
+                    ddf = 'kenward-roger'))
+```
+```{r}
+ex4_contr = list('E. globulis - E. grandis' = c(-1, +1))
+power_contrast(ex4_emm, ex4_contr)
+```
 
