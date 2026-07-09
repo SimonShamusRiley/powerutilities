@@ -10,7 +10,7 @@
 #' @param formula A model formula (containing random effects).
 #' @param data A data frame containing all the columns included in `formula`.
 #' @param ... Other arguments passed to `glmmTMB`.
-#' 
+#' @export
 theta_finder = function(formula, data, ...){
   dots = list(...)
   if ('doFit' %in% names(dots)){
