@@ -4,7 +4,7 @@
 \alias{print.powertable}
 \title{Print the results of a power analysis}
 \usage{
-\method{print}{powertable}(x, digits = 1, pdigits = 4, ...)
+\method{print}{powertable}(x, digits = 1, pdigits = getOption("pdigits", default = 4), ...)
 }
 \arguments{
 \item{x}{A \code{powertable} object}

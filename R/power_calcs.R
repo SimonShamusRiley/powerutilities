@@ -1,3 +1,57 @@
+#' @title Identify how random effects terms will be ordered in the fitted glmmTMB model
+#' @description
+#' When performing a "plug-in" power analysis, the values for the random effects 
+#' must be supplied in the order in which they are saved internally in the glmmTMB 
+#' model. It is not always clear (especially where there are correlated random
+#' slopes and intercepts) just what this ordering is. This helper function takes 
+#' a model formula and a data set and outputs a table enumerating all the implied random
+#' effects and their ordering.
+#' 
+#' @param formula A model formula (containing random effects).
+#' @param data A data frame containing all the columns included in `formula`.
+#' @param ... Other arguments passed to `glmmTMB`.
+#' 
+theta_finder = function(formula, data, ...){
+  dots = list(...)
+  if ('doFit' %in% names(dots)){
+    dots = dots[!which(names(dots) == 'doFit')]
+  }
+  args = c(list(formula = formula, data = data, dispformula = ~ 0), 
+           dots)
+  def0 = do.call(what = glmmTMB, args = c(args, list(doFit = F)))
+  
+  start = list(theta = log(seq(length(def0$parameters$theta))))
+  map = list(theta = factor(rep(NA, length(start$theta))))
+  def1 = do.call(what = glmmTMB, 
+                 args = c(args, list(start = start, map = map, doFit = T)))
+  relist = def1$modelInfo$reTrms$cond$cnms
+  key = Map(list, names(relist), relist)
+  
+  if (any(duplicated(key))){
+    stop(simpleError('The formula contains or implies redundant random effects'))
+  }
+  
+  vc = VarCorr(def1)
+  for (cc in names(vc)){ 
+    for (n in 1:length(vc[[cc]])) {
+      cormat = attr(vc[[cc]][[n]], 'correlation')
+    if (is.null(cormat)){next}
+    pos = exp(cormat/sqrt(1-cormat^2))
+    pos[is.infinite(pos)] = 1
+    attr(vc[[cc]][[n]], 'correlation') = pos
+    }
+  }
+  
+  cat('\nRandom effects (theta values) are defined in the following order:\n')
+  for (cc in names(vc)) { 
+    if (!is.null(vc[[cc]])) { 
+      cat(sprintf("\n%s:\n", glmmTMB:::cNames[[cc]]))
+      print(formatVC(vc[[cc]], digits = digits, comp = "Std.Dev.", corr_digits = 0,
+                     formatter = format, maxdim = 10), quote = FALSE)
+    }
+  }
+}
+
 #' @title Statistical Power of F-tests Performed on Models Fit with glmmTMB
 #'
 #' @description This function calculates the power of F-tests for each fixed

@@ -4,14 +4,20 @@
 \alias{power_contrast}
 \title{Power of Contrasts Performed on Models Fit with glmmTMB}
 \usage{
-power_contrast(emm, contr_list, alpha = 0.05)
+power_contrast(emm, contr_list, alpha = 0.05, n_sims = 10000, ...)
 }
 \arguments{
 \item{emm}{An emmGrid object associated with a \code{\link{glmmTMB}} model.}
 
-\item{contr_list}{A named list of contrasts specifications.}
+\item{contr_list}{A (named) list of contrast specifications.}
 
-\item{alpha}{The nominal type I error rate. Defaults to 0.05.}
+\item{alpha}{Numeric. The nominal type I error rate. Defaults to 0.05.}
+
+\item{n_sims}{Numeric. The number of simulations to use for calculating
+type M error rate. If set to zero, the closed form, asymptotic
+calculations are used.}
+
+\item{...}{Other arguments passed to emmeans::contrast.}
 }
 \description{
 This function calculates the power of contrasts.
