@@ -21,19 +21,19 @@ effect term in the model using one of several methods for determining the
 denominator degrees of freedom.
 }
 \examples{
-#' 
 # Power analysis in a split-plot RCBD experiment on oat yield
 oats = agridat::yates.oats |> 
-       dplyr::mutate(dplyr::across(nitro, factor))
+       dplyr::mutate(nitro = factor(nitro))
 
-# All random effects are arbitrarily given standard deviations of 10
+# Fit the Model, plugging in random effects log(stddev) via "map" and 
+# residual log(stddev) via dispformula = ~ 0 and zerodisp_val.
 oat_mod = glmmTMB(yield ~ gen*nitro + (1|block/gen), 
                   data = oats, 
                   REML = T, 
                   dispformula = ~0, 
-                  start = list(theta = c(log(c(10, 10)))),
+                  start = list(theta = c(log(c(10, 15)))),
                   map = list(theta = factor(c(NA, NA))), 
-                  control = glmmTMBControl(zerodisp_val = log(10))) 
+                  control = glmmTMBControl(zerodisp_val = log(13))) 
                   
 # In a perfectly balanced case, Kenward-Roger produces the same denominator
 # degrees of freedom as the classical containment method

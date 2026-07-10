@@ -10,12 +10,62 @@
 #' @param formula A model formula (containing random effects).
 #' @param data A data frame containing all the columns included in `formula`.
 #' @param ... Other arguments passed to `glmmTMB`.
+#' 
+#' @examples
+#' # 
+#' library(dplyr)
+#' library(agridat)
+#' library(powerutilities)
+#' 
+#' # Following the original analysis by Cornelius and Archbold, row x spacing 
+#' # is treated as main-plots, and stock within main-plots as sub-plots.
+#' apple_des = agridat::archbold.apple |> 
+#'   mutate(across(rep:gen, factor), 
+#'          mp = interaction(row, spacing, sep = '-'), 
+#'          sp = interaction(row, spacing, stock, sep = '-'))
+#' 
+#' # If we opt to treat blocks as random, then here is the
+#' # appropriate model for a split-split-plot RCBD:
+#' ssp_mod = ~ spacing*stock*gen + (1|rep/mp/sp)
+#' 
+#' # The first theta value corresponds to to the standard deviation among 
+#' #  sub-plots, the second theta value correspondss to the of the standard deviation
+#' #  main-plots and the third theta value corresponds to the standard deviation
+#' #  among blocks:
+#' theta_finder(formula = ssp_mod, data = apple_des)
+#' 
+#' # Purely for the sake of illustration, lets add hypothetical random slopes
+#' # for soil pH at subplot level. In the data, the values don't need to be 
+#' # well simulated or even meaningful:
+#' apple_des2 = apple_des |> 
+#'   mutate(pH = 7)
+#' 
+#' # Note that mp and sp are already explicitely defined in terms of their
+#' # nesting structure, so defining them here is terms of their interactions
+#' # isn't really neccessary
+#' ssp_cov_mod = ~ spacing*stock*gen + (1|rep) + (1|rep:mp) + (pH + 1|rep:mp:sp)
+#' 
+#' # Not one but two new theta values have been added to the model: we also
+#' # have the correlation between the pH slope and split-plot intercepts.
+#' theta_finder(formula = ssp_cov_mod, data = apple_des2)
+#' 
+#' # Finally, be aware that redundant random effects terms, which would simply 
+#' # be consolidated when fitting a real model, are problematic here. In this example, 
+#' # rep is included twice:
+#' bad_mod = ~ spacing*stock*gen + (1|rep) + (1|rep/mp) + (1|rep/mp/sp) 
+#' 
+#' try(theta_finder(formula = bad_mod, data = apple_des))
+
+#' 
 #' @export
 theta_finder = function(formula, data, ...){
   dots = list(...)
   if ('doFit' %in% names(dots)){
     dots = dots[!which(names(dots) == 'doFit')]
   }
+  
+  formula = update(formula, rep(1, nrow(data)) ~ .)
+  
   args = c(list(formula = formula, data = data, dispformula = ~ 0), 
            dots)
   def0 = do.call(what = glmmTMB, args = c(args, list(doFit = F)))
@@ -23,12 +73,16 @@ theta_finder = function(formula, data, ...){
   start = list(theta = log(seq(length(def0$parameters$theta))))
   map = list(theta = factor(rep(NA, length(start$theta))))
   def1 = do.call(what = glmmTMB, 
-                 args = c(args, list(start = start, map = map, doFit = T)))
+                 args = c(args, list(start = start, map = map, doFit = T, 
+                                     control = glmmTMBControl(conv_check = 'skip', 
+                                                              rank_check = 'skip'))))
   relist = def1$modelInfo$reTrms$cond$cnms
-  key = Map(list, names(relist), relist)
+  key = paste(names(relist), unlist(relist))
   
   if (any(duplicated(key))){
-    stop(simpleError('The formula contains or implies redundant random effects'))
+    dups = unique(key[which(duplicated(key))])
+    dup_mssg = paste('The following random effects are duplicated in the formula: ', paste(dups, collapse = ", "))
+    stop(simpleError(dup_mssg))
   }
   
   vc = VarCorr(def1)
@@ -46,8 +100,8 @@ theta_finder = function(formula, data, ...){
   for (cc in names(vc)) { 
     if (!is.null(vc[[cc]])) { 
       cat(sprintf("\n%s:\n", glmmTMB:::cNames[[cc]]))
-      print(formatVC(vc[[cc]], digits = digits, comp = "Std.Dev.", corr_digits = 0,
-                     formatter = format, maxdim = 10), quote = FALSE)
+      print(reformulas:::formatVC(vc[[cc]], digits = 1, comp = "Std.Dev.", corr_digits = 0,
+                                  formatter = format, maxdim = 10), quote = FALSE)
     }
   }
 }
@@ -64,19 +118,20 @@ theta_finder = function(formula, data, ...){
 #'  a numeric vector of DF values. 
 #' @param alpha The nominal type I error rate. Defaults to 0.05.
 #' 
-#' @examples#' 
+#' @examples 
 #' # Power analysis in a split-plot RCBD experiment on oat yield
 #' oats = agridat::yates.oats |> 
-#'        dplyr::mutate(dplyr::across(nitro, factor))
+#'        dplyr::mutate(nitro = factor(nitro))
 #' 
-#' # All random effects are arbitrarily given standard deviations of 10
+#' # Fit the Model, plugging in random effects log(stddev) via "map" and 
+#' # residual log(stddev) via dispformula = ~ 0 and zerodisp_val.
 #' oat_mod = glmmTMB(yield ~ gen*nitro + (1|block/gen), 
 #'                   data = oats, 
 #'                   REML = T, 
 #'                   dispformula = ~0, 
-#'                   start = list(theta = c(log(c(10, 10)))),
+#'                   start = list(theta = c(log(c(10, 15)))),
 #'                   map = list(theta = factor(c(NA, NA))), 
-#'                   control = glmmTMBControl(zerodisp_val = log(10))) 
+#'                   control = glmmTMBControl(zerodisp_val = log(13))) 
 #'                   
 #' # In a perfectly balanced case, Kenward-Roger produces the same denominator
 #' # degrees of freedom as the classical containment method

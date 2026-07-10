@@ -21,3 +21,49 @@ slopes and intercepts) just what this ordering is. This helper function takes
 a model formula and a data set and outputs a table enumerating all the implied random
 effects and their ordering.
 }
+\examples{
+# 
+library(dplyr)
+library(agridat)
+library(powerutilities)
+
+# Following the original analysis by Cornelius and Archbold, row x spacing 
+# is treated as main-plots, and stock within main-plots as sub-plots.
+apple_des = agridat::archbold.apple |> 
+  mutate(across(rep:gen, factor), 
+         mp = interaction(row, spacing, sep = '-'), 
+         sp = interaction(row, spacing, stock, sep = '-'))
+
+# If we opt to treat blocks as random, then here is the
+# appropriate model for a split-split-plot RCBD:
+ssp_mod = ~ spacing*stock*gen + (1|rep/mp/sp)
+
+# The first theta value corresponds to to the standard deviation among 
+#  sub-plots, the second theta value correspondss to the of the standard deviation
+#  main-plots and the third theta value corresponds to the standard deviation
+#  among blocks:
+theta_finder(formula = ssp_mod, data = apple_des)
+
+# Purely for the sake of illustration, lets add hypothetical random slopes
+# for soil pH at subplot level. In the data, the values don't need to be 
+# well simulated or even meaningful:
+apple_des2 = apple_des |> 
+  mutate(pH = 7)
+
+# Note that mp and sp are already explicitely defined in terms of their
+# nesting structure, so defining them here is terms of their interactions
+# isn't really neccessary
+ssp_cov_mod = ~ spacing*stock*gen + (1|rep) + (1|rep:mp) + (pH + 1|rep:mp:sp)
+
+# Not one but two new theta values have been added to the model: we also
+# have the correlation between the pH slope and split-plot intercepts.
+theta_finder(formula = ssp_cov_mod, data = apple_des2)
+
+# Finally, be aware that redundant random effects terms, which would simply 
+# be consolidated when fitting a real model, are problematic here. In this example, 
+# rep is included twice:
+bad_mod = ~ spacing*stock*gen + (1|rep) + (1|rep/mp) + (1|rep/mp/sp) 
+
+try(theta_finder(formula = bad_mod, data = apple_des))
+
+}
