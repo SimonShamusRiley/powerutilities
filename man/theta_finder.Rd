@@ -22,7 +22,7 @@ a model formula and a data set and outputs a table enumerating all the implied r
 effects and their ordering.
 }
 \examples{
-# 
+
 library(dplyr)
 library(agridat)
 library(powerutilities)
@@ -62,8 +62,7 @@ theta_finder(formula = ssp_cov_mod, data = apple_des2)
 # Finally, be aware that redundant random effects terms, which would simply 
 # be consolidated when fitting a real model, are problematic here. In this example, 
 # rep is included twice:
-bad_mod = ~ spacing*stock*gen + (1|rep) + (1|rep/mp) + (1|rep/mp/sp) 
+bad_mod = ~ spacing*stock*gen + (1|rep) + (1|rep/mp)
 
 try(theta_finder(formula = bad_mod, data = apple_des))
-
 }

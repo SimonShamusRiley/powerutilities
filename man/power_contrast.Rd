@@ -23,6 +23,11 @@ calculations are used.}
 This function calculates the power of contrasts.
 }
 \examples{
+library(agridat)
+library(dplyr)
+library(glmmTMB)
+library(emmeans)
+
 # Power analysis in a split-plot RCBD experiment on oat yield
 oats = agridat::yates.oats |> 
        dplyr::mutate(dplyr::across(nitro, factor))
@@ -48,5 +53,5 @@ power_contrast(oat_emm, contr)
 (oat_emm2 = emmeans(oat_mod, ~ gen, df = 12))
 
 power_contrast(oat_emm2, contr)  
-                  
+
 }

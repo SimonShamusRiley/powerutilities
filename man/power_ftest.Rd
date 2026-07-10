@@ -22,8 +22,13 @@ denominator degrees of freedom.
 }
 \examples{
 # Power analysis in a split-plot RCBD experiment on oat yield
-oats = agridat::yates.oats |> 
-       dplyr::mutate(nitro = factor(nitro))
+library(agridat)
+libarary(dplyr)
+library(glmmTMB)
+library(powerutilities)
+
+oats = yates.oats |> 
+       mutate(nitro = factor(nitro))
 
 # Fit the Model, plugging in random effects log(stddev) via "map" and 
 # residual log(stddev) via dispformula = ~ 0 and zerodisp_val.
@@ -45,5 +50,5 @@ power_ftest(oat_mod, ddf = 'df.residual')
 
 # Wald-type asympotic tests are the most anti-conservative
 power_ftest(oat_mod, ddf = 'asymptotic')                     
-                  
+               
 }

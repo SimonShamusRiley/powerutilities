@@ -12,7 +12,7 @@
 #' @param ... Other arguments passed to `glmmTMB`.
 #' 
 #' @examples
-#' # 
+#' 
 #' library(dplyr)
 #' library(agridat)
 #' library(powerutilities)
@@ -52,13 +52,21 @@
 #' # Finally, be aware that redundant random effects terms, which would simply 
 #' # be consolidated when fitting a real model, are problematic here. In this example, 
 #' # rep is included twice:
-#' bad_mod = ~ spacing*stock*gen + (1|rep) + (1|rep/mp) + (1|rep/mp/sp) 
+#' bad_mod = ~ spacing*stock*gen + (1|rep) + (1|rep/mp)
 #' 
 #' try(theta_finder(formula = bad_mod, data = apple_des))
 
-#' 
+#' @importFrom glmmTMB glmmTMB glmmTMBControl 
+#' @importFrom nlme VarCorr
+#' @importFrom reformulas formatVC
 #' @export
 theta_finder = function(formula, data, ...){
+  struc_reterms = function(x){list(Group = array(NA, dim = c(length(x), 1), 
+                                                 dimnames = list(NULL, 'Group')),
+                                   `Std.Dev.` = array(rep(x, each = 2), dim = c(length(x), 2), 
+                                                      dimnames = list(NULL, c('Name', 'Std.Dev.'))),
+                                   `Cor.` = array(as.character(NA), dim = c(length(x), length(x)), 
+                                                  dimnames = list(NULL, c('Cor.', rep('', length(x)-1)))))}
   dots = list(...)
   if ('doFit' %in% names(dots)){
     dots = dots[!which(names(dots) == 'doFit')]
@@ -66,17 +74,11 @@ theta_finder = function(formula, data, ...){
   
   formula = update(formula, rep(1, nrow(data)) ~ .)
   
-  args = c(list(formula = formula, data = data, dispformula = ~ 0), 
+  args = c(list(formula = formula, data = data, dispformula = ~ 0, doFit = F), 
            dots)
-  def0 = do.call(what = glmmTMB, args = c(args, list(doFit = F)))
+  def0 = do.call(what = glmmTMB, args = args)
   
-  start = list(theta = log(seq(length(def0$parameters$theta))))
-  map = list(theta = factor(rep(NA, length(start$theta))))
-  def1 = do.call(what = glmmTMB, 
-                 args = c(args, list(start = start, map = map, doFit = T, 
-                                     control = glmmTMBControl(conv_check = 'skip', 
-                                                              rank_check = 'skip'))))
-  relist = def1$modelInfo$reTrms$cond$cnms
+  relist = def0$condList$reTrms$cnms
   key = paste(names(relist), unlist(relist))
   
   if (any(duplicated(key))){
@@ -85,26 +87,132 @@ theta_finder = function(formula, data, ...){
     stop(simpleError(dup_mssg))
   }
   
-  vc = VarCorr(def1)
-  for (cc in names(vc)){ 
-    for (n in 1:length(vc[[cc]])) {
-      cormat = attr(vc[[cc]][[n]], 'correlation')
-    if (is.null(cormat)){next}
-    pos = exp(cormat/sqrt(1-cormat^2))
-    pos[is.infinite(pos)] = 1
-    attr(vc[[cc]][[n]], 'correlation') = pos
-    }
+  terms = lapply(relist, struc_reterms)
+  counter = 1
+  
+  for (i in 1:length(terms)){
+    terms[[i]]$Group[1, 1] = names(terms)[i]
+    
+    sd_start = counter
+    sd_end = counter + (nrow( terms[[i]]$`Std.Dev`)-1)
+    
+    terms[[i]]$`Std.Dev.`[, 2] = seq(sd_start, sd_end)
+    
+    cor_start = sd_end+1
+    cor_end = cor_start + (sum(lower.tri(terms[[i]]$`Cor.`, diag = F))-1)
+    
+    terms[[i]]$`Cor.`[lower.tri(terms[[i]]$`Cor.`, diag = F)] = seq(cor_start, cor_end)
+    terms[[i]]$`Cor.`[lower.tri(terms[[i]]$`Cor.`, diag = F)]
+    
+    counter = cor_end + 1
   }
   
-  cat('\nRandom effects (theta values) are defined in the following order:\n')
-  for (cc in names(vc)) { 
-    if (!is.null(vc[[cc]])) { 
-      cat(sprintf("\n%s:\n", glmmTMB:::cNames[[cc]]))
-      print(reformulas:::formatVC(vc[[cc]], digits = 1, comp = "Std.Dev.", corr_digits = 0,
-                                  formatter = format, maxdim = 10), quote = FALSE)
+  class(terms) = 'retermslist'
+  return(terms)
+}
+
+#' @title Fit a glmmTMB model with fixed random effects terms
+#' @description
+#' This is a wrapper to help with fixing random effects terms in glmmTMB model
+#' for use in subsequent power analysis. In particular, it assists and converting
+#' random effect standard deviation and correlations into the log standard 
+#' deviation and scaled log cholesky factors that glmmTMB expects. 
+#' @param formula A two-sided model formula.
+#' @param data A data.frame.
+#' @param re_terms A vector of random effects standard deviations and, possibly, correlations. 
+#' @param ... Other arguments passed to glmmTMB.
+#' @importFrom glmmTMB glmmTMB glmmTMBControl
+#' @export
+set_glmm = function(formula, data, re_terms = NULL, disp = NULL, ...){
+  dots = list(...)
+  
+  if ('doFit' %in% names(dots)){
+    dots = dots[!which(names(dots) == 'doFit')]
+  }
+  
+  args0 = list(formula = formula, data = data, doFit = F)
+  
+  def0 = do.call(what = glmmTMB, args = c(args0, dots))
+  
+  n_theta = length(def0$parameters$theta)
+  n_re_terms = length(re_terms)
+  
+  if (n_theta == 0){
+    if (n_re_terms > 0){
+      message(simpleMessage('re_terms is ignored: formula does not include any random effects'))
     }
+      args = c(list(formula = formula, data = data, 
+                    dispformula = ~ 0,
+                    control = glmmTMBControl(zerodisp_val = log(disp))), 
+               dots)
+  } else {
+  if (n_theta != n_re_terms){
+    stop(simpleError(paste0(n_theta, ' re_terms are required but ', n_re_terms, ' were supplied. Use `theta_finder()` for help with specifying random effects terms.')))
+  }
+  
+  vc = theta_finder(formula, data)
+  
+  trans_re_terms = c()
+  
+  for (i in 1:length(vc)){
+    trans_re_terms = c(trans_re_terms, log(re_terms[as.numeric(vc[[i]]$Std.Dev.[,'Std.Dev.'])]))
+    
+    if (nrow(vc[[i]]$Std.Dev.) == 1){next}
+    
+    corvals = vc[[i]]$Cor.
+    
+    corvals[upper.tri(corvals)] = corvals[lower.tri(corvals)]
+    
+    cor_mat = array(re_terms[as.numeric(corvals)], dim = dim(corvals))
+    diag(cor_mat) = 1
+    
+    U <- chol(cor_mat)          # upper triangular, t(U) %*% U == corr_mat
+    L <- t(U)                    # lower triangular
+    L <- L / diag(L)             # rescale rows to unit diagonal
+    
+    trans_re_terms <- c(trans_re_terms, L[lower.tri(L)])
+  }
+  
+  maps = list(theta = factor(rep(NA, n_re_terms)))
+  args = c(list(formula = formula, data = data, 
+                start = list(theta = trans_re_terms), 
+                dispformula = ~ 0, map = maps,
+                control = glmmTMBControl(zerodisp_val = log(disp))), 
+           dots)
+  }
+  do.call(glmmTMB, args)
+}
+
+
+#'@export
+print.retermslist = function(x) {
+  pad_columns <- function(mat_list, cols) {
+    widths <- sapply(cols, function(col) {
+      max(sapply(mat_list, function(m) max(nchar(m[, col]), na.rm = TRUE)))
+    })
+    names(widths) <- cols
+    
+    lapply(mat_list, function(m) {
+      for (col in cols) {
+        w <- widths[[col]]
+        x <- m[, col]
+        is_na <- is.na(x)
+        x[!is_na] <- formatC(x[!is_na], width = -w)
+        x[is_na] <- strrep(" ", w)
+        m[, col] <- x
+      }
+      m
+    })
+  }
+  comb_terms = lapply(x, \(x) cbind(x$Group, x$`Std.Dev.`, x$`Cor.`)) |> 
+    pad_columns(cols = c('Group', 'Name'))
+  
+  for (n in 1:length(comb_terms)){
+    prmatrix(comb_terms[[n]], quote = F, na.print = '', rowlab = rep('', nrow(comb_terms[[n]])))
+    cat('\n')
   }
 }
+
 
 #' @title Statistical Power of F-tests Performed on Models Fit with glmmTMB
 #'
@@ -120,8 +228,13 @@ theta_finder = function(formula, data, ...){
 #' 
 #' @examples 
 #' # Power analysis in a split-plot RCBD experiment on oat yield
-#' oats = agridat::yates.oats |> 
-#'        dplyr::mutate(nitro = factor(nitro))
+#' library(agridat)
+#' libarary(dplyr)
+#' library(glmmTMB)
+#' library(powerutilities)
+#' 
+#' oats = yates.oats |> 
+#'        mutate(nitro = factor(nitro))
 #' 
 #' # Fit the Model, plugging in random effects log(stddev) via "map" and 
 #' # residual log(stddev) via dispformula = ~ 0 and zerodisp_val.
@@ -143,12 +256,11 @@ theta_finder = function(formula, data, ...){
 #' 
 #' # Wald-type asympotic tests are the most anti-conservative
 #' power_ftest(oat_mod, ddf = 'asymptotic')                     
-#'                   
+#'                
+#' @importFrom glmmTMB glmmTMB glmmTMBControl
+#' @importFrom emmeans emmeans joint_tests                   
 #' @export
 power_ftest = function(mod, ddf = 'kenward-roger', alpha = 0.05){
-  require(glmmTMB)
-  require(emmeans)
-  
   if (!inherits(ddf, c('character', 'numeric'))){
     stop(simpleError('ddf must be either a numeric vector or else one of: "kenward-roger", "asymptotic", "df.residual"'))
   }
@@ -166,10 +278,10 @@ power_ftest = function(mod, ddf = 'kenward-roger', alpha = 0.05){
       ddf = 'df.residual'
     }
     
-    jt = emmeans::joint_tests(mod, ddf = ddf) 
+    jt = joint_tests(mod, ddf = ddf) 
     
   } else {
-    jt = emmeans::joint_tests(mod, df = 0) |> 
+    jt = joint_tests(mod, df = 0) |> 
       dplyr::mutate(df2= ddf, 
                     p.value = 1-pf(F.ratio, df1, df2)) 
     
@@ -205,6 +317,11 @@ power_ftest = function(mod, ddf = 'kenward-roger', alpha = 0.05){
 #' @param ... Other arguments passed to emmeans::contrast.         
 #' 
 #' @examples
+#' library(agridat)
+#' library(dplyr)
+#' library(glmmTMB)
+#' library(emmeans)
+#' 
 #' # Power analysis in a split-plot RCBD experiment on oat yield
 #' oats = agridat::yates.oats |> 
 #'        dplyr::mutate(dplyr::across(nitro, factor))
@@ -230,13 +347,12 @@ power_ftest = function(mod, ddf = 'kenward-roger', alpha = 0.05){
 #' (oat_emm2 = emmeans(oat_mod, ~ gen, df = 12))
 #' 
 #' power_contrast(oat_emm2, contr)  
-#'                   
+#' 
+#' @importFrom emmeans emmeans contrast    
+#' @importFrom glmmTMB glmmTMB
+#' @importFrom retrodesign retrodesign retro_design_closed_form               
 #' @export
 power_contrast = function(emm, contr_list, alpha = 0.05, n_sims = 1e4, ...){
-  require(glmmTMB)
-  require(emmeans)
-  require(retrodesign)
-  
   if (!inherits(emm, 'emmGrid')){
     stop(simpleError('"emm" must be the result of a call to emmeans()'))
   } 
@@ -289,11 +405,11 @@ power_contrast = function(emm, contr_list, alpha = 0.05, n_sims = 1e4, ...){
                   Fval, Fcrit, Pval, Power) 
   
   if (n_sims == 0){
-    more_errs = with(con, mapply(retrodesign::retro_design_closed_form,
+    more_errs = with(con, mapply(retro_design_closed_form,
                                  A = Estimate, s = SE,
                                  MoreArgs = list(alpha = alpha))) 
   } else {
-    more_errs = with(con, mapply(retrodesign::retrodesign, 
+    more_errs = with(con, mapply(retrodesign, 
                                  A = Estimate, s = SE,
                                  df = DenDF, n.sims = n_sims,
                                  MoreArgs = list(alpha = alpha))) 
