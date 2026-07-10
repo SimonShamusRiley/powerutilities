@@ -419,7 +419,7 @@ power_contrast = function(emm, contr_list, alpha = 0.05, n_sims = 1e4, ...){
   con$TypeM = unlist(more_errs['type_m', ])
   
   out = con |> 
-    mutate(TypeM = ifelse(abs(Estimate) < 1.5e-8, Inf, TypeM))
+    dplyr::mutate(TypeM = ifelse(abs(Estimate) < 1.5e-8, Inf, TypeM))
   
   attr(out, 'alpha') = alpha
   ddf = switch(deparse(emm@dffun)[2], 
