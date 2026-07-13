@@ -229,8 +229,8 @@ set_glmm = function(formula, data, re_terms = NULL, disp = NULL, REML = TRUE, ..
 #' # Wald-type asympotic tests are the most anti-conservative
 #' power_ftest(oat_mod, ddf = 'asymptotic')                     
 #'                
-#' @importFrom glmmTMB glmmTMB glmmTMBControl
-#' @importFrom emmeans emmeans joint_tests                   
+#' @importFrom glmmTMB glmmTMB glmmTMBControl dof_KR dof_satt 
+#' @importFrom emmeans emmeans joint_tests                 
 #' @export
 power_ftest = function(mod, ddf = 'kenward-roger', alpha = 0.05){
   if (!inherits(ddf, c('character', 'numeric'))){
@@ -321,7 +321,7 @@ power_ftest = function(mod, ddf = 'kenward-roger', alpha = 0.05){
 #' power_contrast(oat_emm2, contr)  
 #' 
 #' @importFrom emmeans emmeans contrast    
-#' @importFrom glmmTMB glmmTMB
+#' @importFrom glmmTMB glmmTMB dof_KR dof_satt 
 #' @importFrom retrodesign retrodesign retro_design_closed_form               
 #' @export
 power_contrast = function(emm, contr_list, alpha = 0.05, n_sims = 1e4, ...){
