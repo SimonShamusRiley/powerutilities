@@ -3,6 +3,7 @@
 S3method(knitr::knit_print,powertable)
 S3method(print,powertable)
 S3method(print,retermslist)
+export(extract_disp)
 export(power_contrast)
 export(power_ftest)
 export(set_glmm)

@@ -162,9 +162,25 @@ common_prefix = function(x) {
   substr(first, 1, n_common)
 }
 
-#' @noRd
+#' @title Extract the possibly fixed residual dispersion parameter
+#' 
+#' @description
+#' This is a helper function used for getting `sigma()` when it is not estimated
+#' but fixed.
+#' 
+#' @param mod A glmmTMB model.
+#' @param ... Ignored. 
+#' 
+#' @export
 extract_disp = function(mod, ...){
-  exp(mod$obj$env$parList()$betad)
+  pars = mod$obj$env$parList()
+  if ('betadisp' %in% names(pars)){
+    exp(pars$betadisp)
+  } else if ('betad' %in% names(pars)) {
+    exp(pars$betad)
+  } else {
+    stop(simpleError('Models on the residual dispersion are not currently supported'))
+  }
 }
 
 
