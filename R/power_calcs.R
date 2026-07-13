@@ -125,10 +125,11 @@ theta_finder = function(formula, data, ...){
 #' @param formula A two-sided model formula.
 #' @param data A data.frame.
 #' @param re_terms A vector of random effects standard deviations and, possibly, correlations. 
+#' @param REML Logical. Whether to use REML estimation (default) or, alternatively, ML.
 #' @param ... Other arguments passed to glmmTMB.
 #' @importFrom glmmTMB glmmTMB glmmTMBControl
 #' @export
-set_glmm = function(formula, data, re_terms = NULL, disp = NULL, ...){
+set_glmm = function(formula, data, re_terms = NULL, disp = NULL, REML = TRUE, ...){
   dots = list(...)
   
   if ('doFit' %in% names(dots)){

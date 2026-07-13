@@ -4,7 +4,7 @@
 \alias{set_glmm}
 \title{Fit a glmmTMB model with fixed random effects terms}
 \usage{
-set_glmm(formula, data, re_terms = NULL, disp = NULL, ...)
+set_glmm(formula, data, re_terms = NULL, disp = NULL, REML = TRUE, ...)
 }
 \arguments{
 \item{formula}{A two-sided model formula.}
@@ -12,6 +12,8 @@ set_glmm(formula, data, re_terms = NULL, disp = NULL, ...)
 \item{data}{A data.frame.}
 
 \item{re_terms}{A vector of random effects standard deviations and, possibly, correlations.}
+
+\item{REML}{Logical. Whether to use REML estimation (default) or, alternatively, ML.}
 
 \item{...}{Other arguments passed to glmmTMB.}
 }
