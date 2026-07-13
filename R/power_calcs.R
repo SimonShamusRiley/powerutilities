@@ -246,7 +246,7 @@ power_ftest = function(mod, ddf = 'kenward-roger', alpha = 0.05){
              'df.residual' = 'df.residual')
     
     if (ddf %in% c('kenward-roger') & is.null(reformulas::findbars(formula(mod)))){
-      message('No random effects are present in the model: switching to "df.residual"')
+      #message('No random effects are present in the model: switching to "df.residual"')
       ddf = 'df.residual'
     }
     
