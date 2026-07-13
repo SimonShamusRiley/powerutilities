@@ -130,36 +130,47 @@ theta_finder = function(formula, data, ...){
 #' @param ... Other arguments passed to glmmTMB.
 #' @importFrom glmmTMB glmmTMB glmmTMBControl
 #' @export
-set_glmm = function(formula, data, re_terms = NULL, disp = NULL, REML = TRUE, ...){
+set_glmm = function(formula, data, re_terms = NULL, disp = NULL,
+                    REML = TRUE, ...){
   dots = list(...)
   
   if ('doFit' %in% names(dots)){
     dots = dots[!which(names(dots) == 'doFit')]
   }
   
-  if (disp == 0){
-    disp = 1.2204e-4
-  }
-  
   args0 = list(formula = formula, data = data, REML = REML, doFit = F)
   
-  def0 = do.call(what = glmmTMB, args = c(args0, dots))
+  def0 = suppressWarnings(do.call(what = glmmTMB, args = c(args0, dots)))
+  
+  n_disp = length(def0$parameters$betadisp)
+  n_disp_terms = length(disp)
+  
+  if (n_disp != n_disp_terms){
+    stop(simpleError(paste0(n_disp, ' dispersion parameters are required but ', n_disp_terms, ' were supplied.')))
+  }
+  
+  if (n_disp > 0){
+    starts = list(betadisp = log(disp))
+    maps = list(betadisp = factor(rep(NA, n_disp)))
+  } else {
+    starts = list()
+    maps = list()
+  }
   
   n_theta = length(def0$parameters$theta)
   n_re_terms = length(re_terms)
+  if (n_theta != n_re_terms){
+    stop(simpleError(paste0(n_theta, ' re_terms are required but ', n_re_terms, ' were supplied. Use `theta_finder()` for help with specifying random effects terms.')))
+  }
   
   if (n_theta == 0){
     if (n_re_terms > 0){
       message(simpleMessage('re_terms is ignored: formula does not include any random effects'))
     }
       args = c(list(formula = formula, data = data, 
-                    dispformula = ~ 0,
-                    control = glmmTMBControl(zerodisp_val = log(disp))), 
+                    start = starts, map = maps), 
                dots)
   } else {
-  if (n_theta != n_re_terms){
-    stop(simpleError(paste0(n_theta, ' re_terms are required but ', n_re_terms, ' were supplied. Use `theta_finder()` for help with specifying random effects terms.')))
-  }
   
   vc = theta_finder(formula, data)
   
@@ -174,14 +185,13 @@ set_glmm = function(formula, data, re_terms = NULL, disp = NULL, REML = TRUE, ..
     
     cor_vals = re_terms[na.omit(as.numeric(vc[[i]]$Cor.))]
     cor_thetas = cor_convert_dispatch[[cvst]](x = cor_vals, n = n)
-    trans_re_terms <- c(trans_re_terms, cor_thetas)
+    trans_re_terms = c(trans_re_terms, cor_thetas)
   }
   
-  maps = list(theta = factor(rep(NA, n_re_terms)))
+  starts = c(starts, list(theta = trans_re_terms))
+  maps = c(maps, list(theta = factor(rep(NA, n_re_terms))))
   args = c(list(formula = formula, data = data, REML = REML,
-                start = list(theta = trans_re_terms), 
-                dispformula = ~ 0, map = maps,
-                control = glmmTMBControl(zerodisp_val = log(disp))), 
+                start = starts, map = maps), 
            dots)
   }
   do.call(glmmTMB, args)

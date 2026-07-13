@@ -23,7 +23,7 @@ print.powertable = function(x, digits = 1, pdigits = getOption('pdigits', defaul
   
   print.data.frame(out)
   
-  cat(paste0('\nDegrees-of-freedom method: ', attr(x, 'ddf'), '\n\u03B1 = ', attr(x, 'alpha')))
+  cat(paste0('\nDegrees-of-freedom method: ', attr(x, 'ddf'), '\n\u03B1 = ', attr(x, 'alpha'), '\n'))
 }
 
 #' @exportS3Method knitr::knit_print

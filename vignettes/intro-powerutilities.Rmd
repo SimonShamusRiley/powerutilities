@@ -74,37 +74,30 @@ ex1$Y = ifelse(ex1$Trt == 'A', 0, 3)
 head(ex1, n = 10)
 ```
 
-Now, we fit the model, but while fixing the residual standard deviation to 1.5 using the trick shown below, which entails two arguments, `dispformula` and `control`:
+Now, we fit the model, but while fixing the residual standard deviation to 1.5 using the function `set_glmm`, which simplifies the syntax and help convert model terms to the correct parameterization, but which is otherwise just a wrapper for `glmmTMB`:
+
 
 ```{r}
-ex1_mod = glmmTMB(Y ~ Trt, data = ex1, 
-                  family = gaussian(), REML = T,
-                  # Set dispersion to "zero"...
-                  dispformula = ~ 0,    
-                  # ... and then define what value to use for "zero",
-                  # expressed on the log scale:
-                  control = glmmTMBControl(zerodisp_val = log(1.5)))
+ex1_mod = set_glmm(Y ~ Trt, data = ex1, disp = 1.5)
 
-# Confirm the trick worked:
+# Confirm it worked:
 sigma(ex1_mod)
 ```
-
 On the basis of those results, we can calculate power of the F-test (i.e., ANOVA table) using the `power_ftest` function from the `powerutilities` package: 
 
 ```{r}
-power_ftest(ex1_mod, ddf = 'df.residual')
+power_ftest(ex1_mod)
 ```
 
-Note first, that the power calculated here is identical to the one we got from the `power.t.test()` function. Also note that we had to set the `ddf` argument to "df.residual". We will return to this issue of denominator degrees of freedom later, but for now simply note that there are other choices, and the choice of how to calculate denominator DF will impact the results:
+Note first, that the power calculated here is identical to the one we got from the `power.t.test()` function. Also note that the output includes a degree-of-freedom method, the default for models without random effects being "df.residual". We will not go into detail here, but the choice of DF method will effect the p-value and power:
 
 ```{r}
 power_ftest(ex1_mod, ddf = 'asymptotic')
 ```
-
 In addition to the F-test, we are probably also interested in assessing the power of specific contrasts. To do this, we first need to calculate the estimated marginal means for the factor levels we want to compare:
 
 ```{r}
-(emm = emmeans(ex1_mod, ~Trt)) # Estimated treatment means
+(ex1_emm = emmeans(ex1_mod, ~Trt)) # Estimated treatment means
 ```
 
 We then define our contrasts of interest as a named list, each item of which is a vector of weights. Full treatment of how to define contrasts in R is beyond the scope of this work, but for now suffice to say that a valid class contrasts consist of positive and negative weights, which should all sum to +1 and -1, respectively, and which are ordered to match the output of the call to `emmeans`. Thus, for this example where there is only one possible contrast, we would test for a difference between treatments A and B as follows:
@@ -116,13 +109,13 @@ contr_list = list('Trt A - Trt B' = c(1, -1))
 And then use the `power_contrast` function from `powerutilities` to calculate the power of that test, again assuming the proposed study matched the fake model and data we defined earlier.
 
 ```{r}
-power_contrast(emm, contr_list)
+power_contrast(ex1_emm, contr_list)
 ```
 Note that here the default, "asymptotic", method for determining denominator degrees of freedom was used, and their is a corresponding discrepancy between these results and those of the earlier power analyses. We can rectify this by simply using the "df.residual" method for calculating denominator degrees of freedom when calculating the estimated marginal means:
 
 ```{r}
-emm = emmeans(ex1_mod, ~Trt, ddf = 'df.residual') 
-power_contrast(emm, contr_list)
+ex1_emm = emmeans(ex1_mod, ~Trt, ddf = 'df.residual') 
+power_contrast(ex1_emm, contr_list)
 ```
 Also note that for a comparison of two groups, the F-statistic is simply the square of the t-statistic, meaning that we can use F-tests both for the ANOVA above (which will work for factors with any number of levels) and for the contrast here (where we are only comparing two means or two groups of means at a time). Naturally, for a factor containing only two levels, the results of the two tests are identical.
 
@@ -177,25 +170,24 @@ ex2 = merge(ex2_trt_dict, ex2_des_df)
 head(ex2, 10)
 ```
 
-I can now fit the model. First, note that the same trick as previously is used to fix the value of the residual standard deviation. But here we also have two random effects standard deviations to incorporate as well, and that requires a different trick: we set starting values (using the `start` argument) and then fix those values using the `map` argument. For the map argument, it should be a list of factors ("theta" values corresponding to random effects) where each value set to `NA` will not be estimated, but kept at its starting value. Here, we want both of the two "theta" parameters to be fixed, so the we have `map = list(theta = factor(c(NA, NA)))`:
+I can now fit the model. First, note that the same trick as previously is used to fix the value of the residual standard deviation. But here we also have two random effects standard deviations to incorporate as well: one for block and one for genotype. In order to know the order that those terms need to be supplied, there is a function called `theta_finder`. Here, we can see that for this specification of the random effects, our values should be ordered (1) main-plot, (2) block:
 
 ```{r}
-ex2_mod = glmmTMB(yield ~ gen*nitro + (1|block/gen), data = ex2, 
-                  family = gaussian(link = 'identity'), REML = T,
-                  dispformula = ~ 0,
-                  # Set starting values for the "theta" (RE) parameters:
-                  start = list(theta = c(log(200), log(250))), 
-                  # Then disable estimation of those theta parameters,
-                  # so they stay fixed at their starting values:
-                  map = list(theta = factor(c(NA, NA))), 
-                  control = glmmTMBControl(zerodisp_val = log(250)))
-VarCorr(ex2_mod) # It worked
+theta_finder(yield ~ gen*nitro + (1|block/gen), data = ex2)
+```
+As before, the `set_glmm` function handles the requisite transformations, so that the random effects can simply be given as standard deviations, and any correlations present among the random effects can be given as correlations:
+
+```{r}
+ex2_mod = set_glmm(yield ~ gen*nitro + (1|block/gen), data = ex2, 
+                   re_terms = c(200, 250), disp = 225)
+
+VarCorr(ex2_mod, sigma = extract_disp(ex2_mod)) # It worked
 ```
 
-And we can now assess the power of the F-tests associated with our proposed study. Here, however, we set denominator degrees of freedom to 'kenward-roger', which reduces to the classical "containment" method in the balanced split-plot example, but which is broadly applicable to a range of different experimental designs containing nesting structures. We can see that we have very high power for detecting effect of nitrogen, but very low power for detecting either the main effect of genotype and for the genotype:nitro interaction.
+And we can now assess the power of the F-tests associated with our proposed study. Here, since we have a mixed model, the default denominator degrees of freedom is now 'kenward-roger', which reduces to the classical "containment" method in the balanced split-plot example, but which is broadly applicable to a range of different experimental designs containing nesting structures. We can see that we have very high power for detecting effect of nitrogen, but very low power for detecting either the main effect of genotype and for the genotype:nitro interaction.
 
 ```{r}
-power_ftest(ex2_mod, ddf = 'kenward-roger')
+power_ftest(ex2_mod)
 ```
 
 For the sake of illustration, let us imagine that Victory is something of a "standard" cultivar which we want to use as a reference or control. Let us suppose then that we are interested in comparing the performance of Golden Rain and Marvellous against the performance of Victory separately at each nitrogen level. To do this, we first calculate our marginal means for each genotype while using nitro as a grouping variable (via the "|" operator):
@@ -245,7 +237,7 @@ For those interested in learning more about the use of polynomial and other type
 
 # Example 3: Comparing Linear Trends in a Split-Split-Plot RCBD
 
-In the previous example we saw how polynomial contrasts can be used to test for slopes or for differences in slopes, and in turn how we can calculate the power of such tests. A more natural approach to this, however, is to model and compare these linear trends directly, using an ANCOVA-type model with both categorical and continuous predictors. This example is inspired by an experiment, reported in Gomez and Gomez (1984, p. 143), on rice response to nitrogen fertilization under three different management practices/intensitites. In contrast to the original study, both the yield and nitrogen application rates will be expressed as tons/ha in order to somewhat simplify the interpretation of the results. To start, we define our treatment structure:
+In the previous example we saw how polynomial contrasts can be used to test for slopes or for differences in slopes, and in turn how we can calculate the power of such tests. A more natural approach to this, however, is to model and compare these linear trends directly, using an ANCOVA-type model with both categorical and continuous predictors. This example is inspired by an experiment, reported in Gomez and Gomez (1984, p. 143), on rice response to nitrogen fertilization under three different management practices/intensities. In contrast to the original study, both the yield and nitrogen application rates will be expressed as tons/ha in order to somewhat simplify the interpretation of the results. To start, we define our treatment structure:
 
 ```{r}
 ex3_trt_dict = expand.grid(Management = factor(c('1 Minimal', '2 Optimal', '3 Excessive')), 
@@ -283,19 +275,16 @@ str(ex3)
 Fitting the model is exactly the same as in the previous example:
 
 ```{r}
-ex3_mod = glmmTMB(Yield ~ Block + Management*Cultivar*Nitrogen + 
+ex3_mod = set_glmm(Yield ~ Block + Management*Cultivar*Nitrogen + 
                     (1|Block:Nitrogen) + (1|Block:Nitrogen:Management), 
-                  data = ex3, REML = T,
-                  dispformula = ~ 0,
-                  start = list(theta = log(c(0.25, 0.01))), 
-                  map = list(theta = factor(c(NA, NA))), 
-                  control = glmmTMBControl(zerodisp_val = log(0.6)))
-VarCorr(ex3_mod)
+                  data = ex3, re_terms = c(0.25, 0.01), disp = 0.6)
+
+VarCorr(ex3_mod, sigma = extract_disp(ex3_mod))
 ```
 We can confirm that nitrogen is being treated as a continuous covariate since it only has 1 numerator degree of freedom, whereas if it were a categorical variable the numerator degrees of freedom would be one less than the number of levels for that factor (which in this example would be 5 - 1 = 4). We can also see that in this example we have very high power for the 3 main effects, as well as for the cultivar x nitrogen interaction, but low power for the other interactions.
 
 ```{r}
-power_ftest(ex3_mod, ddf = 'kenward-roger')
+power_ftest(ex3_mod)
 ```
 To calculate the estimated marginal trends, we use the `emtrends` function:
 
@@ -311,57 +300,16 @@ ex3_contr_list = list('V2 slope - V1 slope' = c(-1, 1, 0),
 
 power_contrast(ex3_emt, ex3_contr_list)
 ```
-#Example 4: Power in a Repeated Measures Study
+# Example 4: A Random Slopes Model with Correlated Slope and Intercept
 
-In this example we will imagine a study examining yield in different apple cultivars in the context of pronounced biennial bearing: individual trees alternate between overproduction and underproduction, or what we might think of as negative temporal autocorrelation. We are interested in comparing average yields of two cultivars, and want to better understand how the level of biennial bearing might effect our ability to detect differences.
+Coming soon!
 
-```{r}
-ex4 = expand.grid(Species = c("Honeycrisp", "Fuji"), 
-                  TreeNum = 1:10, 
-                  Year = 1:3) |> 
-  mutate(TreeID = interaction(Species, TreeNum,
-                              sep = '-', lex.order = F), 
-         Yield = case_when(Species == 'Honeycrisp' ~ 40, 
-                         .default = 35), 
-         Yield = case_when(Year == 1 ~ Yield + 5, 
-                           Year == 3 ~ Yield - 5, 
-                           .default = Yield)) |> 
-  arrange(Species, TreeID, Year) 
-head(ex4)
-```
+# Example 5: A Repeated Measures Study with AR(1) Correlation Structure
 
+Coming soon!
 
-```{r}
-phi = -0.5
-theta = phi/sqrt(1-phi^2)
+# Example 6: Gaussian Spatial Correlation Structure
 
-ex4_mod = glmmTMB(Yield ~ Species*Year+ar1(factor(Year)+0|TreeID), 
-                  data = ex4, REML = T, 
-                  dispformula = ~ 0,
-                  start = list(theta = c(log(10), theta)), 
-                  map = list(theta = factor(c(NA, NA))), 
-                  control = glmmTMBControl(zerodisp_val = log(sqrt(144-100))))
-VarCorr(ex4_mod)
-```
+Coming soon! 
 
-
-```{r}
-ex4$Yield_sim = simulate(ex4_mod)[, 1]
-ggplot(ex4, aes(x = Year, y = Yield_sim,
-                color = Species, group = TreeID)) +
-  geom_point()+
-  geom_line()
-```
-
-```{r}
-joint_tests(ex4_mod, ddf = 'kenward-roger')
-```
-```{r}
-(ex4_emm = emmeans(ex4_mod, ~ Species, 
-                    ddf = 'kenward-roger'))
-```
-```{r}
-ex4_contr = list('E. globulis - E. grandis' = c(-1, +1))
-power_contrast(ex4_emm, ex4_contr)
-```
 
