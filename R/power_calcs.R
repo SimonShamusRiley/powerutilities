@@ -61,12 +61,6 @@
 #' @importFrom reformulas formatVC
 #' @export
 theta_finder = function(formula, data, ...){
-  struc_reterms = function(x){list(Group = array(NA, dim = c(length(x), 1), 
-                                                 dimnames = list(NULL, 'Group')),
-                                   `Std.Dev.` = array(rep(x, each = 2), dim = c(length(x), 2), 
-                                                      dimnames = list(NULL, c('Name', 'Std.Dev.'))),
-                                   `Cor.` = array(as.character(NA), dim = c(length(x), length(x)), 
-                                                  dimnames = list(NULL, c('Cor.', rep('', length(x)-1)))))}
   dots = list(...)
   if ('doFit' %in% names(dots)){
     dots = dots[!which(names(dots) == 'doFit')]
@@ -78,7 +72,7 @@ theta_finder = function(formula, data, ...){
            dots)
   def0 = do.call(what = glmmTMB, args = args)
   
-  relist = def0$condList$reTrms$cnms
+  relist = struc_relist(def0)
   key = paste(names(relist), unlist(relist))
   
   if (any(duplicated(key))){
@@ -99,10 +93,21 @@ theta_finder = function(formula, data, ...){
     terms[[i]]$`Std.Dev.`[, 2] = seq(sd_start, sd_end)
     
     cor_start = sd_end+1
-    cor_end = cor_start + (sum(lower.tri(terms[[i]]$`Cor.`, diag = F))-1)
-    
-    terms[[i]]$`Cor.`[lower.tri(terms[[i]]$`Cor.`, diag = F)] = seq(cor_start, cor_end)
-    terms[[i]]$`Cor.`[lower.tri(terms[[i]]$`Cor.`, diag = F)]
+    cv = attr(terms[[i]], 'covstruct')
+    if (cv == 'us'){
+      ncov = sum(lower.tri(terms[[i]]$`Cor.`, diag = F))
+      
+      if (ncov > 0){
+        cor_end = cor_start + (ncov-1)
+        terms[[i]]$`Cor.`[lower.tri(terms[[i]]$`Cor.`, diag = F)] = seq(cor_start, cor_end)
+      } else {
+        cor_end = cor_start-1
+      }
+      
+    } else {
+      cor_end = cor_start
+      terms[[i]]$`Cor.`[1, 1] = cor_start
+    }
     
     counter = cor_end + 1
   }
@@ -128,6 +133,10 @@ set_glmm = function(formula, data, re_terms = NULL, disp = NULL, ...){
   
   if ('doFit' %in% names(dots)){
     dots = dots[!which(names(dots) == 'doFit')]
+  }
+  
+  if (disp == 0){
+    disp = 1.2204e-4
   }
   
   args0 = list(formula = formula, data = data, doFit = F)
@@ -157,20 +166,13 @@ set_glmm = function(formula, data, re_terms = NULL, disp = NULL, ...){
   for (i in 1:length(vc)){
     trans_re_terms = c(trans_re_terms, log(re_terms[as.numeric(vc[[i]]$Std.Dev.[,'Std.Dev.'])]))
     
-    if (nrow(vc[[i]]$Std.Dev.) == 1){next}
+    n = nrow(vc[[i]]$Std.Dev.)
+    cvst = attr(vc[[i]], 'covstruct')
+    if (cvst == 'diag' | (cvst == 'us' & n == 1)){next}
     
-    corvals = vc[[i]]$Cor.
-    
-    corvals[upper.tri(corvals)] = corvals[lower.tri(corvals)]
-    
-    cor_mat = array(re_terms[as.numeric(corvals)], dim = dim(corvals))
-    diag(cor_mat) = 1
-    
-    U <- chol(cor_mat)          # upper triangular, t(U) %*% U == corr_mat
-    L <- t(U)                    # lower triangular
-    L <- L / diag(L)             # rescale rows to unit diagonal
-    
-    trans_re_terms <- c(trans_re_terms, L[lower.tri(L)])
+    cor_vals = re_terms[na.omit(as.numeric(vc[[i]]$Cor.))]
+    cor_thetas = cor_convert_dispatch[[cvst]](x = cor_vals, n = n)
+    trans_re_terms <- c(trans_re_terms, cor_thetas)
   }
   
   maps = list(theta = factor(rep(NA, n_re_terms)))
@@ -182,37 +184,6 @@ set_glmm = function(formula, data, re_terms = NULL, disp = NULL, ...){
   }
   do.call(glmmTMB, args)
 }
-
-
-#'@export
-print.retermslist = function(x) {
-  pad_columns <- function(mat_list, cols) {
-    widths <- sapply(cols, function(col) {
-      max(sapply(mat_list, function(m) max(nchar(m[, col]), na.rm = TRUE)))
-    })
-    names(widths) <- cols
-    
-    lapply(mat_list, function(m) {
-      for (col in cols) {
-        w <- widths[[col]]
-        x <- m[, col]
-        is_na <- is.na(x)
-        x[!is_na] <- formatC(x[!is_na], width = -w)
-        x[is_na] <- strrep(" ", w)
-        m[, col] <- x
-      }
-      m
-    })
-  }
-  comb_terms = lapply(x, \(x) cbind(x$Group, x$`Std.Dev.`, x$`Cor.`)) |> 
-    pad_columns(cols = c('Group', 'Name'))
-  
-  for (n in 1:length(comb_terms)){
-    prmatrix(comb_terms[[n]], quote = F, na.print = '', rowlab = rep('', nrow(comb_terms[[n]])))
-    cat('\n')
-  }
-}
-
 
 #' @title Statistical Power of F-tests Performed on Models Fit with glmmTMB
 #'
@@ -404,16 +375,13 @@ power_contrast = function(emm, contr_list, alpha = 0.05, n_sims = 1e4, ...){
     dplyr::select(Contrast:SE, NumDF, DenDF,  
                   Fval, Fcrit, Pval, Power) 
   
-  if (n_sims == 0){
-    more_errs = with(con, mapply(retro_design_closed_form,
-                                 A = Estimate, s = SE,
-                                 MoreArgs = list(alpha = alpha))) 
-  } else {
-    more_errs = with(con, mapply(retrodesign, 
-                                 A = Estimate, s = SE,
-                                 df = DenDF, n.sims = n_sims,
-                                 MoreArgs = list(alpha = alpha))) 
-  }
+  retro_fun = ifelse(n_sims == 0,
+                     retro_design_closed_form, 
+                     retrodesign)
+  
+  more_errs = with(con, mapply(retro_fun,
+                               A = Estimate, s = SE,
+                               MoreArgs = list(alpha = alpha))) 
    
   con$TypeS  = unlist(more_errs['type_s', ])
   con$TypeM = unlist(more_errs['type_m', ])
@@ -437,40 +405,3 @@ power_contrast = function(emm, contr_list, alpha = 0.05, n_sims = 1e4, ...){
   return(out)
 }
 
-#' @title Print the results of a power analysis
-#'
-#' @description This function controls the formatting when printing `powertable`
-#' objects.
-#'
-#' @param x A `powertable` object
-#' @param digits Integer. The number of digits to print for all columns other 
-#' than the p-value and power. 
-#' @param pdigits Integer. The number of digits to print for the p-value and 
-#' power columns
-#' @export
-print.powertable = function(x, digits = 1, pdigits = getOption('pdigits', default = 4), ...){
-  
-  fmt_like_pval = function(p) {
-    ifelse(p < 10^(-pdigits),
-           paste0('<.', paste(rep('0', pdigits - 1), collapse = ''), '1'),
-           sprintf(paste0('%.', pdigits, 'f'), p))
-  }
-  
-  out = x |>
-    dplyr::mutate(dplyr::across(dplyr::any_of(c('Pval', 'Power', 'TypeS')), fmt_like_pval),
-                  across(where(is.numeric), ~sprintf(paste0('%.', digits, 'f'), .)))
-  
-  print.data.frame(out)
-  
-  cat(paste0('\nDegrees-of-freedom method: ', attr(x, 'ddf'), '\n\u03B1 = ', attr(x, 'alpha')))
-}
-
-#' @exportS3Method knitr::knit_print
-knit_print.powertable = function(x, ...) {
-  out <- paste(capture.output(print.powertable(x, ...)), collapse = "\n")
-  if (knitr::is_html_output()) {
-    knitr::asis_output(paste0("<pre>", out, "</pre>"))
-  } else {
-    knitr::asis_output(paste0("\n```\n", out, "\n```\n"))
-  }
-}
