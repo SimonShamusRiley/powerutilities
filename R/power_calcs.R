@@ -68,7 +68,8 @@ theta_finder = function(formula, data, ...){
   
   formula = update(formula, rep(1, nrow(data)) ~ .)
   
-  args = c(list(formula = formula, data = data, dispformula = ~ 0, doFit = F), 
+  args = c(list(formula = formula, data = data, 
+                dispformula = ~ 0, doFit = F), 
            dots)
   def0 = do.call(what = glmmTMB, args = args)
   
@@ -140,7 +141,7 @@ set_glmm = function(formula, data, re_terms = NULL, disp = NULL, REML = TRUE, ..
     disp = 1.2204e-4
   }
   
-  args0 = list(formula = formula, data = data, doFit = F)
+  args0 = list(formula = formula, data = data, REML = REML, doFit = F)
   
   def0 = do.call(what = glmmTMB, args = c(args0, dots))
   
@@ -177,7 +178,7 @@ set_glmm = function(formula, data, re_terms = NULL, disp = NULL, REML = TRUE, ..
   }
   
   maps = list(theta = factor(rep(NA, n_re_terms)))
-  args = c(list(formula = formula, data = data, 
+  args = c(list(formula = formula, data = data, REML = REML,
                 start = list(theta = trans_re_terms), 
                 dispformula = ~ 0, map = maps,
                 control = glmmTMBControl(zerodisp_val = log(disp))), 
@@ -229,7 +230,7 @@ set_glmm = function(formula, data, re_terms = NULL, disp = NULL, REML = TRUE, ..
 #' # Wald-type asympotic tests are the most anti-conservative
 #' power_ftest(oat_mod, ddf = 'asymptotic')                     
 #'                
-#' @importFrom glmmTMB glmmTMB glmmTMBControl dof_KR dof_satt 
+#' @importFrom glmmTMB glmmTMB glmmTMBControl
 #' @importFrom emmeans emmeans joint_tests                 
 #' @export
 power_ftest = function(mod, ddf = 'kenward-roger', alpha = 0.05){
@@ -321,7 +322,7 @@ power_ftest = function(mod, ddf = 'kenward-roger', alpha = 0.05){
 #' power_contrast(oat_emm2, contr)  
 #' 
 #' @importFrom emmeans emmeans contrast    
-#' @importFrom glmmTMB glmmTMB dof_KR dof_satt 
+#' @importFrom glmmTMB glmmTMB
 #' @importFrom retrodesign retrodesign retro_design_closed_form               
 #' @export
 power_contrast = function(emm, contr_list, alpha = 0.05, n_sims = 1e4, ...){

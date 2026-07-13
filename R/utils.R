@@ -184,5 +184,3 @@ extract_disp = function(mod, ...){
 }
 
 
-
-
