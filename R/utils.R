@@ -16,7 +16,7 @@ covstruct_dispatch = list(
   us   = function(x, ...) {
     out = list(Group = array(NA, dim = c(length(x), 1), 
                        dimnames = list(NULL, 'Group')),
-         `Std.Dev.` = array(rep(x, each = 2), dim = c(length(x), 2), 
+         `Std.Dev.` = array(rep(x, 2), dim = c(length(x), 2), 
                             dimnames = list(NULL, c('Name', 'Std.Dev.'))),
          `Cor.` = array(as.character(NA), dim = c(length(x), length(x)), 
                         dimnames = list(NULL, c('Cor.', rep('', length(x)-1)))))
@@ -26,7 +26,7 @@ covstruct_dispatch = list(
   cs   = function(x, ...) {
     out = list(Group = array(NA, dim = c(length(x), 1), 
                        dimnames = list(NULL, 'Group')),
-         `Std.Dev.` = array(rep(x, each = 2), dim = c(length(x), 2), 
+         `Std.Dev.` = array(rep(x, 2), dim = c(length(x), 2), 
                             dimnames = list(NULL, c('Name', 'Std.Dev.'))),
          `Cor.` = array(as.character(NA), dim = c(length(x), 1), 
                         dimnames = list(NULL, 'Cor.')))
@@ -56,7 +56,7 @@ covstruct_dispatch = list(
   hetar1 = function(x, ...) {
     out = list(Group = array(NA, dim = c(length(x), 1), 
                              dimnames = list(NULL, 'Group')),
-               `Std.Dev.` = array(rep(x, each = 2), dim = c(length(x), 2), 
+               `Std.Dev.` = array(rep(x, 2), dim = c(length(x), 2), 
                                   dimnames = list(NULL, c('Name', 'Std.Dev.'))),
                `Cor.` = array(as.character(NA), dim = c(length(x), 1), 
                               dimnames = list(NULL, 'Cor.')))
@@ -96,7 +96,7 @@ covstruct_dispatch = list(
   diag = function(x, ...) {
     out = list(Group = array(NA, dim = c(length(x), 1), 
                              dimnames = list(NULL, 'Group')),
-               `Std.Dev.` = array(rep(x, each = 2), dim = c(length(x), 2), 
+               `Std.Dev.` = array(rep(x, 2), dim = c(length(x), 2), 
                                   dimnames = list(NULL, c('Name', 'Std.Dev.'))),
                `Cor.` = array(as.character(NA), dim = c(length(x), length(x)), 
                               dimnames = list(NULL, c('Cor.', rep('', length(x)-1)))))
