@@ -4,14 +4,16 @@
 \alias{power_ftest}
 \title{Statistical Power of F-tests Performed on Models Fit with glmmTMB}
 \usage{
-power_ftest(mod, ddf = "kenward-roger", alpha = 0.05)
+power_ftest(mod, ddf, alpha = 0.05)
 }
 \arguments{
 \item{mod}{A \code{\link{glmmTMB}} model}
 
-\item{ddf}{Method for calculating denominator degrees of freedom
-('kenward-roger' (default), 'df.residual', or 'asymptotic') or else
-a numeric vector of DF values.}
+\item{ddf}{Either a numeric vector or a method for calculating denominator
+degrees of freedom. For fixed-effects models, these include: 'df.residual'
+(default) and 'asymptotic'. For mixed-effects models, these include:
+'kenward-roger' (default),
+'df.residual', 'asymptotic'.}
 
 \item{alpha}{The nominal type I error rate. Defaults to 0.05.}
 }

@@ -204,9 +204,11 @@ set_glmm = function(formula, data, re_terms = NULL, disp = NULL,
 #'   denominator degrees of freedom.
 #'
 #' @param mod A \code{\link{glmmTMB}} model
-#' @param ddf Method for calculating denominator degrees of freedom 
-#'  ('kenward-roger' (default), 'df.residual', or 'asymptotic') or else
-#'  a numeric vector of DF values. 
+#' @param ddf Either a numeric vector or a method for calculating denominator
+#'   degrees of freedom. For fixed-effects models, these include: 'df.residual'
+#'   (default) and 'asymptotic'. For mixed-effects models, these include:
+#'   'kenward-roger' (default),
+#' 'df.residual', 'asymptotic'.  
 #' @param alpha The nominal type I error rate. Defaults to 0.05.
 #' 
 #' @examples 
@@ -241,34 +243,51 @@ set_glmm = function(formula, data, re_terms = NULL, disp = NULL,
 #' power_ftest(oat_mod, ddf = 'asymptotic')                     
 #'                
 #' @importFrom glmmTMB glmmTMB glmmTMBControl
-#' @importFrom emmeans emmeans joint_tests                 
+#' @importFrom emmeans emmeans joint_tests
+#' @importFrom reformulas findbars                 
 #' @export
-power_ftest = function(mod, ddf = 'kenward-roger', alpha = 0.05){
-  if (!inherits(ddf, c('character', 'numeric'))){
-    stop(simpleError('ddf must be either a numeric vector or else one of: "kenward-roger", "asymptotic", "df.residual"'))
-  }
+power_ftest = function(mod, ddf, alpha = 0.05){
+  mixed = !is.null(findbars(formula(mod)))
+  numddf = inherits(ddf, 'numeric')
   
-  if (inherits(ddf, 'character')) {
-    ddf = match.arg(ddf, choices = c('kenward-roger', 'kr', 
-                                     'asymptotic', 'df.residual')) |> 
-      switch('kenward-roger' = 'kenward-roger', 
-             'kr' = 'kenward-roger', 
-             'asymptotic' = 'asymptotic', 
-             'df.residual' = 'df.residual')
-    
-    if (ddf %in% c('kenward-roger') & is.null(reformulas::findbars(formula(mod)))){
-      #message('No random effects are present in the model: switching to "df.residual"')
+  if (!mixed){
+    # FE models with default ddf
+    if (missing(ddf)){             
       ddf = 'df.residual'
-    }
-    
-    jt = joint_tests(mod, ddf = ddf) 
-    
-  } else {
-    jt = joint_tests(mod, df = 0) |> 
-      dplyr::mutate(df2= ddf, 
-                    p.value = 1-pf(F.ratio, df1, df2)) 
-    
-  }
+    } 
+    # FE models with specified ddf
+    else {                       
+      if (!(numddf | ddf %in% c('asymptotic', 'df.residual'))){
+        stop(simpleError('for fixed-effects models, ddf must be one of: "df.residual", "asymptotic", or else a numeric vector'))
+        } 
+      
+      if (numddf){
+        jt = joint_tests(mod, df = 0) |>
+          dplyr::mutate(df2= ddf, p.value = 1-pf(F.ratio, df1, df2))
+        } else if (ddf == 'asymptotic'){
+          jt = joint_tests(mod, df = Inf)
+          } else {
+            jt = joint_tests(mod, ddf = ddf)
+            }
+      }
+    } else {
+      # ME models with default ddf
+      if (missing(ddf)){
+        ddf = 'kenward-roger'
+        }
+      # ME model with specified ddf
+      else {
+        if (!(numddf| ddf %in% c('kenward-roger', 'asymptotic', 'df.residual'))){
+          stop(simpleError('for mixed-effects models, ddf must be one of: "kenward-roger', 'df.residual", "asymptotic", or else a numeric vector'))
+          }
+        if (numddf){
+          jt = joint_tests(mod,df = 0) |>
+            dplyr::mutate(df2= ddf, p.value = 1-pf(F.ratio, df1, df2))  
+          } else {
+            jt = joint_tests(mod, ddf = ddf)
+          }
+        }
+      }
   
   pow = jt |>
     as.data.frame() |>

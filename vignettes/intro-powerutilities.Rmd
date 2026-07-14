@@ -74,8 +74,7 @@ ex1$Y = ifelse(ex1$Trt == 'A', 0, 3)
 head(ex1, n = 10)
 ```
 
-Now, we fit the model, but while fixing the residual standard deviation to 1.5 using the function `set_glmm`, which simplifies the syntax and help convert model terms to the correct parameterization, but which is otherwise just a wrapper for `glmmTMB`:
-
+Now, we fit the model, but while fixing the residual standard deviation to 1.5 using the function `set_glmm`, which is essentially just a wrapper for `glmmTMB` modified to simplify the syntax and parameterization when fixing parameter values.
 
 ```{r}
 ex1_mod = set_glmm(Y ~ Trt, data = ex1, disp = 1.5)
@@ -302,14 +301,49 @@ power_contrast(ex3_emt, ex3_contr_list)
 ```
 # Example 4: A Random Slopes Model with Correlated Slope and Intercept
 
-Coming soon!
+```{r}
+ex4 = expand.grid(Diet = factor(1:2),
+                   Sex = factor(c("M", "F")),
+                   Rep = factor(1:8)) |> 
+  mutate(ID = interaction(Sex, Diet, Rep, sep = '-'),
+         T_0 = case_when(Sex == 'M' ~ 100, 
+                         Sex == 'F' ~ 90),
+         T_1 = case_when(Sex == 'M' & Diet == '1' ~ 140, 
+                         Sex == 'M' & Diet == '2' ~ 150, 
+                         Sex == 'F' & Diet == '1' ~ 130,
+                         Sex == 'F' & Diet == '2' ~ 140)) |> 
+  pivot_longer(cols = c('T_0', 'T_1'), names_to = 'Time',
+               values_to = 'Wt') |> 
+  mutate(Time = as.numeric(gsub('T_', '', Time)))
+```
 
+```{r}
+ex4_form = Wt ~ Diet*Sex*Time + (Time + 1| ID)
+theta_finder(ex4_form, data = ex4)
+```
+```{r}
+ex4_mod = set_glmm(ex4_form, data = ex4,
+                   re_terms = c(10, 3, .33), 
+                   disp = 10)
+VarCorr(ex4_mod, sigma = extract_disp(ex4_mod))
+```
+```{r}
+power_ftest(ex4_mod)
+```
+
+```{r}
+power_ftest(ex4_mod)
+```
 # Example 5: A Repeated Measures Study with AR(1) Correlation Structure
 
 Coming soon!
 
-# Example 6: Gaussian Spatial Correlation Structure
+# Example 6: Data with a Gaussian Spatial Correlation Structure
 
 Coming soon! 
+
+# Example 7: Data Exhibiting Heteroscedasticity (Unequal Variance)
+
+Coming soon!
 
 
