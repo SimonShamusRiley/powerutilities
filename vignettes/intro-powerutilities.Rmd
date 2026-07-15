@@ -46,10 +46,10 @@ library(powerutilities)
 
 # Example 1: A two-sample t-test
 
-To begin, lets consider the simplest example, in which we will establish an single factor experiment with two levels ('A' and 'B') arranged in a completely randomized design (CRD) with 8 replicates per treatment. Under these circumstances, we can actually skip the modeling stage and simply perform a two-sample t-test on this data, and for that we have tools in base R for performing power analysis. By simply leaving one of the arguments the set `n`, `delta`, `sd`, `sig.level` and `power` to the value `NULL`,  that value will be calculated on the basis of the other arguments provided. Thus, if we assume a residual standard deviation of 1.5 and a difference in treatment means of 3, then our power is 0.96 (which is excellent).
+To begin, lets consider the simplest example, in which we will establish an single factor experiment with two levels ('A' and 'B') arranged in a completely randomized design (CRD) with 8 replicates per treatment. Under these circumstances, we can actually skip the modeling stage and simply perform a two-sample t-test on this data, and for that we have tools in base R for performing power analysis. By simply leaving one of the arguments the set `n`, `delta`, `sd`, `sig.level` and `power` to the value `NULL`,  that value will be calculated on the basis of the other arguments provided. Thus, if we assume a residual standard deviation of 2 and a difference in treatment means of 3, then our power is just shy of 0.8, or 80%, which is widely considered the threshold for an adequately powered study.
 
 ```{r}
-power.t.test(n = 8, delta = 3, sd = 1.5, 
+power.t.test(n = 8, delta = 3, sd = 2, 
              sig.level = 0.05, power = NULL, 
              type = 'two.sample', 
              alternative = 'two.sided')
@@ -74,10 +74,10 @@ ex1$Y = ifelse(ex1$Trt == 'A', 0, 3)
 head(ex1, n = 10)
 ```
 
-Now, we fit the model, but while fixing the residual standard deviation to 1.5 using the function `set_glmm`, which is essentially just a wrapper for `glmmTMB` modified to simplify the syntax and parameterization when fixing parameter values.
+Now, we fit the model, but while fixing the residual standard deviation to 2 using the function `set_glmm`, which is essentially just a wrapper for `glmmTMB` modified to simplify the syntax and parameterization when fixing parameter values.
 
 ```{r}
-ex1_mod = set_glmm(Y ~ Trt, data = ex1, disp = 1.5)
+ex1_mod = set_glmm(Y ~ Trt, data = ex1, disp = 2)
 
 # Confirm it worked:
 sigma(ex1_mod)
@@ -87,7 +87,6 @@ On the basis of those results, we can calculate power of the F-test (i.e., ANOVA
 ```{r}
 power_ftest(ex1_mod)
 ```
-
 Note first, that the power calculated here is identical to the one we got from the `power.t.test()` function. Also note that the output includes a degree-of-freedom method, the default for models without random effects being "df.residual". We will not go into detail here, but the choice of DF method will effect the p-value and power:
 
 ```{r}
@@ -99,7 +98,7 @@ In addition to the F-test, we are probably also interested in assessing the powe
 (ex1_emm = emmeans(ex1_mod, ~Trt)) # Estimated treatment means
 ```
 
-We then define our contrasts of interest as a named list, each item of which is a vector of weights. Full treatment of how to define contrasts in R is beyond the scope of this work, but for now suffice to say that a valid class contrasts consist of positive and negative weights, which should all sum to +1 and -1, respectively, and which are ordered to match the output of the call to `emmeans`. Thus, for this example where there is only one possible contrast, we would test for a difference between treatments A and B as follows:
+We then define our contrasts of interest as a named list, each item of which is a vector of weights. For more details on how and why we specify contrasts, refer to `vignette('contrasts-powerutilities')`. For this example there is in fact only one possible contrast, testing for a difference between treatments A and B as follows:
 
 ```{r}
 contr_list = list('Trt A - Trt B' = c(1, -1))
@@ -110,15 +109,20 @@ And then use the `power_contrast` function from `powerutilities` to calculate th
 ```{r}
 power_contrast(ex1_emm, contr_list)
 ```
-Note that here the default, "asymptotic", method for determining denominator degrees of freedom was used, and their is a corresponding discrepancy between these results and those of the earlier power analyses. We can rectify this by simply using the "df.residual" method for calculating denominator degrees of freedom when calculating the estimated marginal means:
+
+There are several things to note about this output. Firstly, we note that p-value and power shown here are identical, as they should be. We also note that while it would be common to report the t-statistic for such a comparison, for a test between two groups the F-statistic is simply the square of the t-statistic, so we can in effect use the two interchangeably. Besides statistical power, this output also provides two other important metrics: the probability of a sign error ("TypeS") and the expected ratio between a significant estimate and the true value (magnitude, or "TypeM" error). The former is the probability that, assuming you conducted this experiment, performed the test and found a statistically significant difference, that you'd get the actual relationship backwards (i.e., your estimates would have A larger than B). Naturally, we want this value as close as possible to zero. The type M error is the expected ratio between a statistically significant estimate and the true value: underpowered studies will tend to, when they do achieve statistically significant findings, produce estimates which are markedly biased. We want this value as close to 1 as possible. Further details on the measures can be found in Gelman & Carlin [-@gelmanPowerCalculationsAssessing2014].
 
 ```{r}
-ex1_emm = emmeans(ex1_mod, ~Trt, ddf = 'df.residual') 
+ex1_emm = emmeans(ex1_mod, ~Trt)
 power_contrast(ex1_emm, contr_list)
 ```
-Also note that for a comparison of two groups, the F-statistic is simply the square of the t-statistic, meaning that we can use F-tests both for the ANOVA above (which will work for factors with any number of levels) and for the contrast here (where we are only comparing two means or two groups of means at a time). Naturally, for a factor containing only two levels, the results of the two tests are identical.
+Two additional options are worth noting here before moving on. First, if we want to change the degree of freedom calculations for `power_contrast`, we need to do that when constructing the `emmeans` object. Secondly, we can see the expected with of the confidence interval for our contrast simply by using `infer = c(T, T)`:
 
-This output also gives us two additional metrics for assessing power: the "type S" error rate and the "type M" error rate. The former is the probability that a statistically significant result would have the wrong sign, while the latter is "exaggeration ratio": the expected ration between a statistically significant result and the true value. Further details on the measures can be found in Gelman & Carlin [-@gelmanPowerCalculationsAssessing2014].
+```{r}
+ex1_emm = emmeans(ex1_mod, ~Trt)
+power_contrast(ex1_emm, contr_list,  infer = c(T, T))
+```
+
 
 We've now seen that for this simple example the "plug-in" method produces the same results as the basic power equations do. However, this "plug-in" approach will also work for basically any design or model we can think of. 
 

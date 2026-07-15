@@ -1,4 +1,3 @@
-
 #' @noRd
 struc_relist = function(x){
   reterms = x$condList$reTrms$cnms
@@ -183,4 +182,114 @@ extract_disp = function(mod, ...){
   }
 }
 
+#' @importFrom reformulas RHSForm nobars
+#' @importFrom emmeans emmeans
+#' @importFrom pbkrtest Lb_ddf
+#' @importFrom glmmTMB glmmTMB
+resolve_ddf = function(object, request){
+  if (inherits(object, 'glmmTMB')){
+    model = object
+    fe_form = nobars(RHSForm(formula(object), as.form = T))
+    emm = emmeans(object, fe_form)
+  } else if (inherits(object, 'emmGrid')){
+    emm = object
+    model = eval(emm@model.info$call)
+  } else {
+    stop(simpleError('object should be a glmmTMB model or emmGrid object constructed from one'))
+  }
+  
+  fixed = is.null(findbars(formula(model)))
+  numddf = inherits(request, 'numeric')
+  
+  gaus = TRUE
+  
+  if (family(model)$family != 'gaussian' | family(model)$link != 'identity'){
+      gaus = FALSE
+  }
+  
+  asymp_dffun = function(k, dfargs){
+    Inf
+  }
+  dfres_dffun = function(k, dfargs){
+    stats::df.residual(dfargs$object)
+  }
+  
+  dfres_dfarg = function(model){
+    list(object = model)
+  }
+  
+  kr_dffun = function(k, dfargs){
+    Lb_ddf(k, dfargs$unadjV, dfargs$adjV)
+  }
+  
+  kr_dfarg = function(model){
+    V <- vcov(model)$cond
+    list(unadjV = V, adjV = glmmTMB:::.vcov_kenward_adjusted(model))
+  }
+  
+  usr_dffun = function(k, dfargs){
+    0
+  }
+  
+  if (numddf){
+      fun = usr_dffun
+      ddf = 'user-supplied'
+      args = list(NULL)
+  } else if (is.null(request)){
+    if (gaus){
+      if (fixed){
+        fun = dfres_dffun
+        args = dfres_dfarg(model)
+        ddf = 'df.residual'
+      } else {
+        fun = kr_dffun
+        args = kr_dfarg(model)
+        ddf = 'kenward-roger'
+      }} else {
+      fun = asymp_dffun
+      args = list(NULL)
+      ddf = 'asymptotic'
+    } 
+  } else if (request == 'asymptotic'){
+    fun = asymp_dffun
+    args = list(NULL)
+    ddf = 'asymptotic'
+  } else if (request == 'df.residual'){
+    fun = dfres_dffun
+    args = dfres_dfarg(model)
+    ddf = 'df.residual'
+  } else if (request == 'kenward-roger'){
+    if (gaus & !fixed){
+      fun = kr_dffun
+      args = kr_dfarg(model)
+      ddf = 'kenward-roger'
+    } else {
+      if (!gaus){
+        message(simpleMessage('kenward-roger DenDFs are available for gaussian mixed models only, switching to asymptotic DenDFs'))
+        fun = asymp_dffun
+        args = list(NULL)
+        ddf = 'asymptotic'
+      }
+      if (gaus & fixed) {
+        message(simpleMessage('kenward-roger DenDFs are available for gaussian mixed models only, switching to residual DenDFs'))
+        fun = dfres_dffun
+        args = dfres_dfarg(model)
+        ddf = 'df.residual'
+      }
+    }
+  }
+  list(dffun = fun, dfargs = args, ddf = ddf)
+}
 
+capwords <- function(s, strict = FALSE) {
+  cap <- function(s) paste(toupper(substring(s, 1, 1)),
+                           {s <- substring(s, 2); if(strict) tolower(s) else s},
+                           sep = "", collapse = " " )
+  sapply(strsplit(s, split = " "), cap, USE.NAMES = !is.null(names(s)))
+}
+
+check_ddf = function(ddf, methods = c('df.residual', 'asymptotic', 'kenward-roger')){
+  if (identical(ddf, NULL)){return(TRUE)}
+  if (all(inherits(ddf, 'numeric'))){return(TRUE)}
+  ifelse(ddf %in% methods, TRUE, stop(simpleError(paste('If non-NULL, ddf should be a numeric vector or one of:', paste(methods, collapse = ', ')))))
+}

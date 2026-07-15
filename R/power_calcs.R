@@ -58,14 +58,17 @@
 
 #' @importFrom glmmTMB glmmTMB glmmTMBControl 
 #' @importFrom nlme VarCorr
-#' @importFrom reformulas formatVC
+#' @importFrom reformulas formatVC findbars
 #' @export
 theta_finder = function(formula, data, ...){
   dots = list(...)
   if ('doFit' %in% names(dots)){
     dots = dots[!which(names(dots) == 'doFit')]
   }
-  
+  if (is.null(findbars(formula))){
+    message(simpleMessage('The formula does include random effects'))
+    return(invisible())
+  }
   formula = update(formula, rep(1, nrow(data)) ~ .)
   
   args = c(list(formula = formula, data = data, 
@@ -138,7 +141,7 @@ set_glmm = function(formula, data, re_terms = NULL, disp = NULL,
     dots = dots[!which(names(dots) == 'doFit')]
   }
   
-  args0 = list(formula = formula, data = data, REML = REML, doFit = F)
+  args0 = c(list(formula = formula, data = data, REML = REML, doFit = F))
   
   def0 = suppressWarnings(do.call(what = glmmTMB, args = c(args0, dots)))
   
@@ -167,9 +170,13 @@ set_glmm = function(formula, data, re_terms = NULL, disp = NULL,
     if (n_re_terms > 0){
       message(simpleMessage('re_terms is ignored: formula does not include any random effects'))
     }
-      args = c(list(formula = formula, data = data, 
-                    start = starts, map = maps), 
-               dots)
+      if (n_disp == 0){
+        args = c(list(formula = formula, data = data), dots) 
+      } else {
+        args = c(list(formula = formula, data = data, 
+                      start = starts, map = maps), 
+                 dots) 
+      }
   } else {
   
   vc = theta_finder(formula, data)
@@ -204,93 +211,45 @@ set_glmm = function(formula, data, re_terms = NULL, disp = NULL,
 #'   denominator degrees of freedom.
 #'
 #' @param mod A \code{\link{glmmTMB}} model
-#' @param ddf Either a numeric vector or a method for calculating denominator
-#'   degrees of freedom. For fixed-effects models, these include: 'df.residual'
-#'   (default) and 'asymptotic'. For mixed-effects models, these include:
-#'   'kenward-roger' (default),
-#' 'df.residual', 'asymptotic'.  
+#' @param ddf Either a method for calculating denominator degrees of freedom (
+#'   currently supported options are "df.residual", "asymptotic" and
+#'   "kenward-roger"), a numeric vector, or NULL (the default), in which case a
+#'   method is selected based on the model type.
 #' @param alpha The nominal type I error rate. Defaults to 0.05.
-#' 
-#' @examples 
-#' # Power analysis in a split-plot RCBD experiment on oat yield
-#' library(agridat)
-#' libarary(dplyr)
-#' library(glmmTMB)
-#' library(powerutilities)
-#' 
-#' oats = yates.oats |> 
-#'        mutate(nitro = factor(nitro))
-#' 
-#' # Fit the Model, plugging in random effects log(stddev) via "map" and 
-#' # residual log(stddev) via dispformula = ~ 0 and zerodisp_val.
-#' oat_mod = glmmTMB(yield ~ gen*nitro + (1|block/gen), 
-#'                   data = oats, 
-#'                   REML = T, 
-#'                   dispformula = ~0, 
-#'                   start = list(theta = c(log(c(10, 15)))),
-#'                   map = list(theta = factor(c(NA, NA))), 
-#'                   control = glmmTMBControl(zerodisp_val = log(13))) 
-#'                   
-#' # In a perfectly balanced case, Kenward-Roger produces the same denominator
-#' # degrees of freedom as the classical containment method
-#' power_ftest(oat_mod, ddf = 'kr') 
-#' 
-#' # Residual degrees of freedom, appropriate for non-nested designs, is 
-#' # anti-conservative
-#' power_ftest(oat_mod, ddf = 'df.residual')  
-#' 
-#' # Wald-type asympotic tests are the most anti-conservative
-#' power_ftest(oat_mod, ddf = 'asymptotic')                     
+#' @param ... Other values passed to emmeans.
 #'                
 #' @importFrom glmmTMB glmmTMB glmmTMBControl
 #' @importFrom emmeans emmeans joint_tests
-#' @importFrom reformulas findbars                 
+#' @importFrom reformulas findbars RHSForm                
 #' @export
-power_ftest = function(mod, ddf, alpha = 0.05){
-  mixed = !is.null(findbars(formula(mod)))
-  numddf = inherits(ddf, 'numeric')
+power_ftest = function(mod, ddf = NULL, alpha = 0.05, ...){
+  check_ddf(ddf)
   
-  if (!mixed){
-    # FE models with default ddf
-    if (missing(ddf)){             
-      ddf = 'df.residual'
-    } 
-    # FE models with specified ddf
-    else {                       
-      if (!(numddf | ddf %in% c('asymptotic', 'df.residual'))){
-        stop(simpleError('for fixed-effects models, ddf must be one of: "df.residual", "asymptotic", or else a numeric vector'))
-        } 
-      
-      if (numddf){
-        jt = joint_tests(mod, df = 0) |>
-          dplyr::mutate(df2= ddf, p.value = 1-pf(F.ratio, df1, df2))
-        } else if (ddf == 'asymptotic'){
-          jt = joint_tests(mod, df = Inf)
-          } else {
-            jt = joint_tests(mod, ddf = ddf)
-            }
-      }
-    } else {
-      # ME models with default ddf
-      if (missing(ddf)){
-        ddf = 'kenward-roger'
-        }
-      # ME model with specified ddf
-      else {
-        if (!(numddf| ddf %in% c('kenward-roger', 'asymptotic', 'df.residual'))){
-          stop(simpleError('for mixed-effects models, ddf must be one of: "kenward-roger', 'df.residual", "asymptotic", or else a numeric vector'))
-          }
-        if (numddf){
-          jt = joint_tests(mod,df = 0) |>
-            dplyr::mutate(df2= ddf, p.value = 1-pf(F.ratio, df1, df2))  
-          } else {
-            jt = joint_tests(mod, ddf = ddf)
-          }
-        }
-      }
+  df_final = resolve_ddf(mod, ddf)
+  
+  numddf = all(inherits(ddf, 'numeric'))
+  fe_form = nobars(RHSForm(formula(mod), as.form = T))
+  
+  dots = list(...)
+  args = c(list(mod, fe_form), dots)
+  emm = do.call(emmeans, args)
+  
+  emm@dffun = df_final$dffun
+  emm@dfargs = df_final$dfargs
+  
+  jt = joint_tests(emm) |> 
+    as.data.frame()
+  
+  if (numddf){
+    if (!length(ddf) %in% c(1, nrow(jt))) {
+      stop(simpleError(sprintf('%s ddf supplied for %s tests', length(ddf), nrow(jt))))
+    }
+    
+    jt = jt |> 
+      dplyr::mutate(df2= ddf, p.value = 1-pf(F.ratio, df1, df2))
+  }
   
   pow = jt |>
-    as.data.frame() |>
     dplyr::rename(Term = `model term`, NumDF = df1, DenDF = df2,
                   Fval = F.ratio, Pval = p.value) |> 
     dplyr::mutate(NC_param = Fval*NumDF,
@@ -299,62 +258,34 @@ power_ftest = function(mod, ddf, alpha = 0.05){
     dplyr::select(Term, NumDF, DenDF,
                   Fval, Fcrit, Pval, Power)
   attr(pow, 'alpha') = alpha
-  attr(pow, 'ddf') = ifelse(inherits(ddf, 'character'), ddf,
-                            'user-specified')
+  attr(pow, 'ddf') = df_final$ddf
   
   class(pow) = c('powertable', 'data.frame')
   return(pow)
 }
-
 #' @title Power of Contrasts Performed on Models Fit with glmmTMB
 #'
 #' @description This function calculates the power of contrasts.
 #'
-#' @param emm An emmGrid object associated with a \code{\link{glmmTMB}} model.
+#' @param emm An emmGrid object associated with a `glmmTMB` model.
 #' @param contr_list A (named) list of contrast specifications.
+#' @param ddf Either a method for calculating denominator degrees of freedom (
+#'   currently supported options are "df.residual", "asymptotic" and
+#'   "kenward-roger"), a numeric value, or NULL (the default), in which case a
+#'   method is selected based on the model type.
 #' @param alpha  Numeric. The nominal type I error rate. Defaults to 0.05.
 #' @param n_sims Numeric. The number of simulations to use for calculating
 #'               type M error rate. If set to zero, the closed form, asymptotic
 #'               calculations are used.
 #' @param ... Other arguments passed to emmeans::contrast.         
 #' 
-#' @examples
-#' library(agridat)
-#' library(dplyr)
-#' library(glmmTMB)
-#' library(emmeans)
-#' 
-#' # Power analysis in a split-plot RCBD experiment on oat yield
-#' oats = agridat::yates.oats |> 
-#'        dplyr::mutate(dplyr::across(nitro, factor))
-#' 
-#' # All random effects are arbitrarily given standard deviations of 10
-#' oat_mod = glmmTMB(yield ~ gen*nitro + (1|block/gen), 
-#'                   data = oats, 
-#'                   REML = T, 
-#'                   dispformula = ~0, 
-#'                   start = list(theta = c(log(c(10, 10)))),
-#'                   map = list(theta = factor(c(NA, NA))), 
-#'                   control = glmmTMBControl(zerodisp_val = log(10))) 
-#' 
-#' # Here, the denominator DF are determined when EMMs are calculated:
-#' (oat_emm = emmeans(oat_mod, ~ gen, ddf = 'kenward-roger'))
-#' 
-#' contr = list('GoldenRain vs Others' = c(1, -0.5, -0.5))
-#' 
-#' power_contrast(oat_emm, contr)             
-#' 
-#' # With manually specified denominator DFs (note that the argument
-#' # is not `ddf =`, but `df =`)
-#' (oat_emm2 = emmeans(oat_mod, ~ gen, df = 12))
-#' 
-#' power_contrast(oat_emm2, contr)  
-#' 
 #' @importFrom emmeans emmeans contrast    
 #' @importFrom glmmTMB glmmTMB
 #' @importFrom retrodesign retrodesign retro_design_closed_form               
+#' @importFrom reformulas findbars
 #' @export
-power_contrast = function(emm, contr_list, alpha = 0.05, n_sims = 1e4, ...){
+power_contrast = function(emm, contr_list, ddf = NULL, 
+                          alpha = 0.05, n_sims = 1e4, ...){
   if (!inherits(emm, 'emmGrid')){
     stop(simpleError('"emm" must be the result of a call to emmeans()'))
   } 
@@ -365,36 +296,72 @@ power_contrast = function(emm, contr_list, alpha = 0.05, n_sims = 1e4, ...){
     stop(simpleError('n_sims must be a non-negative numeric value'))
   }
   
+  check_ddf(ddf)
+  
   dots = list(...)
   
   if ('ratios' %in% names(dots)){
-    message(simpleMessage('Setting `ratios = FALSE`: power calculations must be performed on the link scale.'))
-    dots = dots[which(names(dots) != 'ratios')]
+    if (isFALSE(dots$ratios)){
+      message(simpleMessage('Setting `ratios = FALSE`: power calculations must be performed on the link scale.'))
+      dots = dots[!names(dots)=='ratios']
+    }
   }
   
   if ('null' %in% names(dots)){
-    message(simpleMessage('Setting `null = 0`: powerutilities does not yet support non-zero null hypotheses.'))
-    dots$null = 0
+    if (null != 0){
+      message(simpleMessage('Setting `null = 0`: powerutilities does not yet support non-zero null hypotheses.'))
+      dots$null = 0 
+    }
   }
   
   if ('predict.type' %in% names(emm@misc)){
     if (emm@misc$predict.type != 'emmeans'){
-    message(simpleMessage('Setting `type = "emmeans"`: power calculations must be performed on the link scale.'))
-    emm = update(emm, type = 'emmeans')
+      message(simpleMessage('Setting `type = "emmeans"`: power calculations must be performed on the link scale.'))
+      emm = update(emm, type = 'emmeans')
     }
   }
   
-  capwords <- function(s, strict = FALSE) {
-    cap <- function(s) paste(toupper(substring(s, 1, 1)),
-                             {s <- substring(s, 2); if(strict) tolower(s) else s},
-                             sep = "", collapse = " " )
-    sapply(strsplit(s, split = " "), cap, USE.NAMES = !is.null(names(s)))
+  fixed = is.null(findbars(formula(emm@model.info$call)))
+  numddf = inherits(ddf, 'numeric')
+  if (numddf & length(ddf) > 1){
+    warning(simpleWarning('multiple ddf values supplied, only the first will be used'))
   }
-
+  
+  gen = FALSE
+  
+  call_list = as.list(emm@model.info$call)
+  if ('family' %in% names(call_list)){
+    fam = eval(call_list$family)
+    if (fam$family != 'gaussian' | fam$link != 'identity'){
+      gen = TRUE
+    }
+  }
+  
+  if (identical(ddf, 'df.residual') | (is.null(ddf) & (fixed & !gen))){
+    model = eval(emm@model.info$call)
+    df_final = resolve_ddf(emm, request = ddf)
+  }
+  
+  df_final = resolve_ddf(emm, request = ddf)
+  
+  if (numddf){
+    emm = update(emm, df = ddf)
+  } else {
+    emm@dffun = df_final$dffun
+    emm@dfargs = df_final$dfargs
+  }
+  
   con = do.call(emmeans::contrast, c(list(emm, contr_list, ratios = FALSE), dots)) |> 
     as.data.frame() |> 
-    dplyr::rename_with(~ dplyr::if_else(. == "z.ratio", "t.ratio", .),
-                       .cols = everything()) |> 
+    dplyr::rename_with(
+      .fn = ~ dplyr::case_when(
+        . == "z.ratio" ~ "t.ratio",
+        . %in% c("lower.CL", "asymp.LCL") ~ "LCL",
+        . %in% c("upper.CL", "asymp.UCL") ~ "UCL",
+        TRUE ~ .
+      ),
+      .cols = everything()
+    ) |> 
     dplyr::mutate(NumDF = 1, 
                   DenDF = df, 
                   Fval = t.ratio^2, 
@@ -403,17 +370,24 @@ power_contrast = function(emm, contr_list, alpha = 0.05, n_sims = 1e4, ...){
                   Power = 1-pf(Fcrit, NumDF, DenDF, ncp = NC_param)) |> 
     dplyr::rename_with(capwords, .cols = 1:SE) |> 
     dplyr::rename(Pval = p.value) |> 
-    dplyr::select(Contrast:SE, NumDF, DenDF,  
+    dplyr::select(Contrast:SE, 
+                  any_of(c('LCL', 'UCL')), NumDF, DenDF,  
                   Fval, Fcrit, Pval, Power) 
   
   retro_fun = ifelse(n_sims == 0,
                      retro_design_closed_form, 
                      retrodesign)
+  if (n_sims == 0){
+    more_errs = with(con, mapply(retro_design_closed_form,
+                                 A = Estimate, s = SE, 
+                                 MoreArgs = list(alpha = alpha))) 
+  } else {
+    more_errs = with(con, mapply(retrodesign,
+                                 A = Estimate, s = SE, df = DenDF,
+                                 MoreArgs = list(alpha = alpha, 
+                                                 n.sims = n_sims))) 
+  }
   
-  more_errs = with(con, mapply(retro_fun,
-                               A = Estimate, s = SE,
-                               MoreArgs = list(alpha = alpha))) 
-   
   con$TypeS  = unlist(more_errs['type_s', ])
   con$TypeM = unlist(more_errs['type_m', ])
   
@@ -421,18 +395,11 @@ power_contrast = function(emm, contr_list, alpha = 0.05, n_sims = 1e4, ...){
     dplyr::mutate(TypeM = ifelse(abs(Estimate) < 1.5e-8, Inf, TypeM))
   
   attr(out, 'alpha') = alpha
-  ddf = switch(deparse(emm@dffun)[2], 
-               "pbkrtest::Lb_ddf(k, dfargs$unadjV, dfargs$adjV)" = 'kenward-roger', 
-               'Inf' = 'asymptotic', 
-               "stats::df.residual(dfargs$object)" = 'df.residual')
-  
-  if (ddf == 'asymptotic' & !is.null(emm@misc$df)){
-    ddf = 'user-specified'
-  }
-  
-  attr(out, 'ddf') = ddf
+  attr(out, 'ddf') = df_final$ddf
   
   class(out) = c('powertable', 'data.frame')
   return(out)
 }
+
+
 

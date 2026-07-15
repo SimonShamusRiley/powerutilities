@@ -4,53 +4,22 @@
 \alias{power_ftest}
 \title{Statistical Power of F-tests Performed on Models Fit with glmmTMB}
 \usage{
-power_ftest(mod, ddf, alpha = 0.05)
+power_ftest(mod, ddf = NULL, alpha = 0.05, ...)
 }
 \arguments{
 \item{mod}{A \code{\link{glmmTMB}} model}
 
-\item{ddf}{Either a numeric vector or a method for calculating denominator
-degrees of freedom. For fixed-effects models, these include: 'df.residual'
-(default) and 'asymptotic'. For mixed-effects models, these include:
-'kenward-roger' (default),
-'df.residual', 'asymptotic'.}
+\item{ddf}{Either a method for calculating denominator degrees of freedom (
+currently supported options are "df.residual", "asymptotic" and
+"kenward-roger"), a numeric vector, or NULL (the default), in which case a
+method is selected based on the model type.}
 
 \item{alpha}{The nominal type I error rate. Defaults to 0.05.}
+
+\item{...}{Other values passed to emmeans.}
 }
 \description{
 This function calculates the power of F-tests for each fixed
 effect term in the model using one of several methods for determining the
 denominator degrees of freedom.
-}
-\examples{
-# Power analysis in a split-plot RCBD experiment on oat yield
-library(agridat)
-libarary(dplyr)
-library(glmmTMB)
-library(powerutilities)
-
-oats = yates.oats |> 
-       mutate(nitro = factor(nitro))
-
-# Fit the Model, plugging in random effects log(stddev) via "map" and 
-# residual log(stddev) via dispformula = ~ 0 and zerodisp_val.
-oat_mod = glmmTMB(yield ~ gen*nitro + (1|block/gen), 
-                  data = oats, 
-                  REML = T, 
-                  dispformula = ~0, 
-                  start = list(theta = c(log(c(10, 15)))),
-                  map = list(theta = factor(c(NA, NA))), 
-                  control = glmmTMBControl(zerodisp_val = log(13))) 
-                  
-# In a perfectly balanced case, Kenward-Roger produces the same denominator
-# degrees of freedom as the classical containment method
-power_ftest(oat_mod, ddf = 'kr') 
-
-# Residual degrees of freedom, appropriate for non-nested designs, is 
-# anti-conservative
-power_ftest(oat_mod, ddf = 'df.residual')  
-
-# Wald-type asympotic tests are the most anti-conservative
-power_ftest(oat_mod, ddf = 'asymptotic')                     
-               
 }
