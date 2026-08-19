@@ -326,7 +326,7 @@ ex3_contr2 = list('Slope Vic ≠ 0' = c(-0.671, -0.224,  0.224,  0.671, 0, 0, 0,
 And we now have the power for these two tests regarding the response trend:
 
 ```{r}
-power_contrast(ex2_emm2, ex2_contr2, ddf = 'kenward-roger')
+power_contrast(ex3_emm2, ex3_contr2, ddf = 'kenward-roger')
 ```
 Note that the p-value and power achieved via this approach for the test of the differences in slope is (almost) identical to the results achieved via `emtrends`, although that will not be the case for higher-order polynomial models. An alternative approach to manually specifying the linear/polynomial contrasts, especially useful if we want to determine whether curvature in the trend will be detectable, is to use the in-built 'poly' contrast specification from emmeans (note here we are using the "|" in the call to emmeans to denote that gen is a grouping variable):
 

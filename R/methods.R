@@ -35,10 +35,12 @@ print.powertable = function(x, digits = 1, pdigits = getOption('pdigits', defaul
       } 
     }
   }
-  
+ 
   out = x |>
-    dplyr::mutate(dplyr::across(dplyr::any_of(c('Pval', 'Power', 'TypeS')), ~fmt_pval(., pdigits = pdigits)),
-                  dplyr::across(dplyr::any_of(c('Estimate', 'SE', 'LCL', 'UCL')), ~ fmt_est_ci(., ci_width = UCL - LCL)),
+    dplyr::mutate(dplyr::across(dplyr::any_of(c('Pval', 'Power', 'TypeS')), 
+                                ~fmt_pval(., pdigits = pdigits)),
+                  dplyr::across(dplyr::any_of(c('Estimate', 'SE', 'LCL', 'UCL')),
+                                ~ fmt_est_ci(., ci_width = qt(1-attr(x, 'attr')/2, df = DenDF)*SE*2)),
                   dplyr::across(dplyr::any_of(c('NumDF', 'DenDF')), fmt_df),
                   across(where(is.numeric), ~sprintf(paste0('%.', digits, 'f'), .)))
   
