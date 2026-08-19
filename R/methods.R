@@ -24,11 +24,15 @@ print.powertable = function(x, digits = 1, pdigits = getOption('pdigits', defaul
   }
   
   fmt_df = function(x){
-    int = all(abs(x - round(x) < 1e-3))
-    if(int) {
-      sprintf('%.0f', x)
+    if (all(is.infinite(x))){
+      x
     } else {
-      sprintf('%.1f', x)
+      int = all(abs(x - round(x) < 1e-3))
+      if(int) {
+        sprintf('%.0f', x)
+      } else {
+        sprintf('%.1f', x)
+      } 
     }
   }
   
