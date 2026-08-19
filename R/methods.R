@@ -11,14 +11,31 @@
 #' @export
 print.powertable = function(x, digits = 1, pdigits = getOption('pdigits', default = 4), ...){
   
-  fmt_like_pval = function(p) {
+  fmt_pval = function(p, pdigits) {
     ifelse(p < 10^(-pdigits),
            paste0('<.', paste(rep('0', pdigits - 1), collapse = ''), '1'),
            sprintf(paste0('%.', pdigits, 'f'), p))
   }
   
+  fmt_est_ci = function(x, ci_width){
+    v = max(0, -log10(ci_width))
+    d = ceiling(v)+1
+    sprintf(paste0('%.', d, 'f'), x)
+  }
+  
+  fmt_df = function(x){
+    int = all(abs(x - round(x) < 1e-3))
+    if(int) {
+      sprintf('%.0f', x)
+    } else {
+      sprintf('%.1f', x)
+    }
+  }
+  
   out = x |>
-    dplyr::mutate(dplyr::across(dplyr::any_of(c('Pval', 'Power', 'TypeS')), fmt_like_pval),
+    dplyr::mutate(dplyr::across(dplyr::any_of(c('Pval', 'Power', 'TypeS')), ~fmt_pval(., pdigits = pdigits)),
+                  dplyr::across(dplyr::any_of(c('Estimate', 'SE', 'LCL', 'UCL')), ~ fmt_est_ci(., ci_width = UCL - LCL)),
+                  dplyr::across(dplyr::any_of(c('NumDF', 'DenDF')), fmt_df),
                   across(where(is.numeric), ~sprintf(paste0('%.', digits, 'f'), .)))
   
   print.data.frame(out)

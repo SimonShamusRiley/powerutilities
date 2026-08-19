@@ -210,6 +210,7 @@ resolve_ddf = function(object, request){
   asymp_dffun = function(k, dfargs){
     Inf
   }
+  
   dfres_dffun = function(k, dfargs){
     stats::df.residual(dfargs$object)
   }
@@ -222,9 +223,18 @@ resolve_ddf = function(object, request){
     Lb_ddf(k, dfargs$unadjV, dfargs$adjV)
   }
   
-  kr_dfarg = function(model){
-    V <- vcov(model)$cond
-    list(unadjV = V, adjV = glmmTMB:::.vcov_kenward_adjusted(model))
+  kr_dfarg = function(model) {
+    V = vcov(model)$cond
+    aV = array(dim = dim(V))
+    nna = apply(V, 1, \(x){!all(is.na(x))})
+    Phi = V[nna, nna]
+    S = glmmTMB:::.get_SigmaG(model)
+    X = glmmTMB::getME(model, "X")
+    aVs = glmmTMB:::.vcovAdj16_internal(Phi, S, X)  
+    #aV[nna, nna] = as.matrix(aVs)
+    #dimnames(aV) = dimnames(V)
+    #list(unadjV = V, adjV = aV)
+    list(unadjV = Phi, adjV = aVs)
   }
   
   usr_dffun = function(k, dfargs){

@@ -231,7 +231,7 @@ power_ftest = function(mod, ddf = NULL, alpha = 0.05, ...){
   fe_form = nobars(RHSForm(formula(mod), as.form = T))
   
   dots = list(...)
-  args = c(list(mod, fe_form), dots)
+  args = c(list(object = mod, specs = fe_form), dots)
   emm = do.call(emmeans, args)
   
   emm@dffun = df_final$dffun
