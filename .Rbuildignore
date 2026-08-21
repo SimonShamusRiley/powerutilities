@@ -2,3 +2,4 @@
 ^\.Rproj\.user$
 ^doc$
 ^Meta$
+R/tests.R
