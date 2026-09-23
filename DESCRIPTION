@@ -1,9 +1,9 @@
 Package: powerutilities
-Title: Plug-In Power Analysis for Linear and Generalized Linear Mixed Models
+Title: Power Analysis for Linear and Generalized Linear Mixed Models
 Description: Tools for prospective power analysis and design planning using
     the "plug-in" approach described by Piepho et al. (2022)
     <doi:10.1017/S0021859622000466> and Stroup, Ptukhina and Garai (2024)
-    <doi:10.1201/9780429092060>. Expected treatment means and the proposed
+    <https://www.taylorfrancis.com/chapters/mono/10.1201/9780429092060-24/precision-power-sample-size-planning-walter-stroup-marina-ptukhina-julie-garai?context=ubx&refId=7081f25c-0d97-41eb-b09c-a81ef861e2ef>. Expected treatment means and the proposed
     experimental design are encoded in an artificial data set, and a model is
     "fit" to it with random effect variances, correlations and residual
     dispersion fixed set at user-specified values rather than being estimated.
