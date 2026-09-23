@@ -8,12 +8,24 @@ export(power_contrast)
 export(power_ftest)
 export(set_glmm)
 export(theta_finder)
+importFrom(dplyr,
+  across,
+  any_of,
+  case_when,
+  everything,
+  mutate,
+  rename,
+  rename_with,
+  select,
+  where
+)
 importFrom(emmeans,
   contrast,
   emmeans,
   joint_tests
 )
 importFrom(glmmTMB,
+  getME,
   glmmTMB,
   glmmTMBControl
 )
@@ -21,10 +33,23 @@ importFrom(pbkrtest,Lb_ddf)
 importFrom(reformulas,
   RHSForm,
   findbars,
-  formatVC,
   nobars
 )
 importFrom(retrodesign,
   retro_design_closed_form,
   retrodesign
 )
+importFrom(rlang,.data)
+importFrom(stats,
+  df.residual,
+  family,
+  formula,
+  na.omit,
+  pf,
+  qf,
+  qlogis,
+  qt,
+  update,
+  vcov
+)
+importFrom(utils,capture.output)

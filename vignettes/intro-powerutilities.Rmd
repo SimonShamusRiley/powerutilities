@@ -38,7 +38,8 @@ The origins of the approach to power analysis employed here, which [Piepho et al
 To begin, load the required packages:
 
 ```{r, warning=F, message=F}
-library(tidyverse)
+library(dplyr)
+library(tidyr)
 library(glmmTMB)
 library(emmeans)
 library(powerutilities)
@@ -109,7 +110,7 @@ And then use the `power_contrast` function from `powerutilities` to calculate th
 power_contrast(ex1_emm, contr_list)
 ```
 
-There are several things to note about this output. Firstly, we note that p-value and power shown here are identical to those calculated previously, as they should be. Also note that besides statistical power, this output also provides two other important metrics: the probability of a sign error ("TypeS") and the expected ratio between a significant estimate and the true value (magnitude, or "TypeM" error). The former is the probability that, assuming you conducted this experiment, performed the test and found a statistically significant difference, that you'd get the actual relationship backwards (i.e., your estimates would have A larger than B). Naturally, we want this value as close as possible to zero. The type M error is the expected ratio between a statistically significant estimate and the true value: underpowered studies will tend, when they do happen to achieve statistically significant findings, to produce estimates which are markedly biased. We want this value as close to 1 as possible. Further details on the measures can be found in Gelman & Carlin [-@gelmanPowerCalculationsAssessing2014].
+There are several things to note about this output. Firstly, we note that p-value and power shown here are identical to those calculated previously, as they should be. Also note that besides statistical power, this output also provides two other important metrics: the probability of a sign error ("TypeS") and the expected ratio between a significant estimate and the true value (magnitude, or "TypeM" error). The former is the probability that, assuming you conducted this experiment, performed the test and found a statistically significant difference, that you'd get the actual relationship backwards (i.e., your estimates would have A larger than B). Naturally, we want this value as close as possible to zero. The type M error is the expected ratio between a statistically significant estimate and the true value: underpowered studies will tend, when they do happen to achieve statistically significant findings, to produce estimates which are markedly biased. We want this value as close to 1 as possible. Further details on the measures can be found in [Gelman & Carlin](https://doi.org/10.1177/1745691614551642).
 
 ```{r}
 (ex1_emm = emmeans(ex1_mod, ~Trt))

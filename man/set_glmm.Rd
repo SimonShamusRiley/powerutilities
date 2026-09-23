@@ -13,13 +13,34 @@ set_glmm(formula, data, re_terms = NULL, disp = NULL, REML = TRUE, ...)
 
 \item{re_terms}{A vector of random effects standard deviations and, possibly, correlations.}
 
+\item{disp}{The value at which to fix the residual dispersion.}
+
 \item{REML}{Logical. Whether to use REML estimation (default) or, alternatively, ML.}
 
 \item{...}{Other arguments passed to glmmTMB.}
+}
+\value{
+A \code{glmmTMB} object.
 }
 \description{
 This is a wrapper to help with fixing random effects terms in glmmTMB model
 for use in subsequent power analysis. In particular, it assists and converting
 random effect standard deviation and correlations into the log standard
 deviation and scaled log cholesky factors that glmmTMB expects.
+}
+\examples{
+
+# Create synthetic data set:
+nrep = 8 # Number of replicates
+nfac = 2 # Number of treatments
+dat = expand.grid(Rep = factor(1:nrep),
+                  Trt = factor(LETTERS[1:nfac])) 
+dat$Y = ifelse(dat$Trt == 'A', 0, 3)
+
+# "Fit" the model while setting residual standard deviation to 2:
+mod = set_glmm(Y ~ Trt, data = dat, disp = 2)
+
+# Confirm it worked:
+sigma(mod)
+
 }

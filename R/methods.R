@@ -8,7 +8,10 @@
 #' than the p-value and power. 
 #' @param pdigits Integer. The number of digits to print for the p-value and 
 #' power columns
-#' @param ... unused
+#' @param ... Unused
+#' @importFrom stats qt
+#' @importFrom dplyr mutate across any_of where
+#' @importFrom rlang .data
 #' @export
 print.powertable = function(x, digits = 1, pdigits = getOption('pdigits', default = 4), ...){
   
@@ -38,11 +41,11 @@ print.powertable = function(x, digits = 1, pdigits = getOption('pdigits', defaul
   }
  
   out = x |>
-    dplyr::mutate(dplyr::across(dplyr::any_of(c('Pval', 'Power', 'TypeS')), 
+    mutate(across(any_of(c('Pval', 'Power', 'TypeS')), 
                                 ~fmt_pval(., pdigits = pdigits)),
-                  dplyr::across(dplyr::any_of(c('Estimate', 'SE', 'LCL', 'UCL')),
-                                ~ fmt_est_ci(., ci_width = qt(1-attr(x, 'attr')/2, df = DenDF)*SE*2)),
-                  dplyr::across(dplyr::any_of(c('NumDF', 'DenDF')), fmt_df),
+                  across(any_of(c('Estimate', 'SE', 'LCL', 'UCL')),
+                         ~ fmt_est_ci(., ci_width = qt(1-attr(x, 'alpha')/2, df = .data$DenDF)*SE*2)),
+                  across(any_of(c('NumDF', 'DenDF')), fmt_df),
                   across(where(is.numeric), ~sprintf(paste0('%.', digits, 'f'), .)))
   
   print.data.frame(out)
@@ -51,6 +54,7 @@ print.powertable = function(x, digits = 1, pdigits = getOption('pdigits', defaul
 }
 
 #' @exportS3Method knitr::knit_print
+#' @importFrom utils capture.output
 knit_print.powertable = function(x, ...) {
   out <- paste(capture.output(print.powertable(x, ...)), collapse = "\n")
   if (knitr::is_html_output()) {
@@ -61,7 +65,7 @@ knit_print.powertable = function(x, ...) {
 }
 
 #'@export
-print.retermslist = function(x) {
+print.retermslist = function(x, ...) {
   pad_columns <- function(mat_list, cols) {
     widths <- sapply(cols, function(col) {
       max(sapply(mat_list, function(m) max(nchar(m[, col]), na.rm = TRUE)))

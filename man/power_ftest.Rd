@@ -18,8 +18,27 @@ method is selected based on the model type.}
 
 \item{...}{Other values passed to emmeans.}
 }
+\value{
+A \code{powertable} object.
+}
 \description{
 This function calculates the power of F-tests for each fixed
 effect term in the model using one of several methods for determining the
 denominator degrees of freedom.
+}
+\examples{
+
+# Create synthetic data set:
+nrep = 8 # Number of replicates
+nfac = 2 # Number of treatments
+dat = expand.grid(Rep = factor(1:nrep),
+                  Trt = factor(LETTERS[1:nfac])) 
+dat$Y = ifelse(dat$Trt == 'A', 0, 3)
+
+# "Fit" the model while setting residual standard deviation to 2:
+mod = set_glmm(Y ~ Trt, data = dat, disp = 2)
+
+# Calculate power
+power_ftest(mod)
+
 }

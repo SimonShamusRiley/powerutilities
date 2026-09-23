@@ -11,11 +11,12 @@
 #' @param data A data frame containing all the columns included in `formula`.
 #' @param ... Other arguments passed to `glmmTMB`.
 #' 
-#' @examples
+#' @return A 'retermslist' object numbering each of the random effect variances
+#' and correlations implied by the model formula.
+#' 
+#' @examplesIf requireNamespace("agridat", quietly = TRUE)
 #' 
 #' library(dplyr)
-#' library(agridat)
-#' library(powerutilities)
 #' 
 #' # Following the original analysis by Cornelius and Archbold, row x spacing 
 #' # is treated as main-plots, and stock within main-plots as sub-plots.
@@ -55,17 +56,18 @@
 #' bad_mod = ~ spacing*stock*gen + (1|rep) + (1|rep/mp)
 #' 
 #' try(theta_finder(formula = bad_mod, data = apple_des))
-
+#' 
+#' @importFrom stats update
 #' @importFrom glmmTMB glmmTMB glmmTMBControl 
-#' @importFrom reformulas formatVC findbars
+#' @importFrom reformulas findbars
 #' @export
 theta_finder = function(formula, data, ...){
   dots = list(...)
   if ('doFit' %in% names(dots)){
-    dots = dots[!which(names(dots) == 'doFit')]
+    dots = dots[names(dots) != 'doFit']
   }
   if (is.null(findbars(formula))){
-    message(simpleMessage('The formula does include random effects'))
+    message(simpleMessage('The formula does not include random effects'))
     return(invisible())
   }
   formula = update(formula, rep(1, nrow(data)) ~ .)
@@ -125,19 +127,40 @@ theta_finder = function(formula, data, ...){
 #' for use in subsequent power analysis. In particular, it assists and converting
 #' random effect standard deviation and correlations into the log standard 
 #' deviation and scaled log cholesky factors that glmmTMB expects. 
+#' 
 #' @param formula A two-sided model formula.
 #' @param data A data.frame.
-#' @param re_terms A vector of random effects standard deviations and, possibly, correlations. 
+#' @param re_terms A vector of random effects standard deviations and, possibly, correlations.
+#' @param disp The value at which to fix the residual dispersion. 
 #' @param REML Logical. Whether to use REML estimation (default) or, alternatively, ML.
 #' @param ... Other arguments passed to glmmTMB.
+#' 
+#' @return A `glmmTMB` object.
+#' 
+#' @examples
+#' 
+#' # Create synthetic data set:
+#' nrep = 8 # Number of replicates
+#' nfac = 2 # Number of treatments
+#' dat = expand.grid(Rep = factor(1:nrep),
+#'                   Trt = factor(LETTERS[1:nfac])) 
+#' dat$Y = ifelse(dat$Trt == 'A', 0, 3)
+#' 
+#' # "Fit" the model while setting residual standard deviation to 2:
+#' mod = set_glmm(Y ~ Trt, data = dat, disp = 2)
+#' 
+#' # Confirm it worked:
+#' sigma(mod)
+#' 
 #' @importFrom glmmTMB glmmTMB glmmTMBControl
+#' @importFrom stats na.omit
 #' @export
 set_glmm = function(formula, data, re_terms = NULL, disp = NULL,
                     REML = TRUE, ...){
   dots = list(...)
   
   if ('doFit' %in% names(dots)){
-    dots = dots[!which(names(dots) == 'doFit')]
+    dots = dots[names(dots) != 'doFit']
   }
   
   args0 = c(list(formula = formula, data = data, REML = REML, doFit = F))
@@ -200,7 +223,8 @@ set_glmm = function(formula, data, re_terms = NULL, disp = NULL,
                 start = starts, map = maps), 
            dots)
   }
-  do.call(glmmTMB, args)
+  out = do.call(glmmTMB, args)
+  return(out)
 }
 
 #' @title Statistical Power of F-tests Performed on Models Fit with glmmTMB
@@ -209,17 +233,38 @@ set_glmm = function(formula, data, re_terms = NULL, disp = NULL,
 #'   effect term in the model using one of several methods for determining the
 #'   denominator degrees of freedom.
 #'
-#' @param mod A \code{\link{glmmTMB}} model
+#' @param mod A `glmmTMB` model
 #' @param ddf Either a method for calculating denominator degrees of freedom (
 #'   currently supported options are "df.residual", "asymptotic" and
 #'   "kenward-roger"), a numeric vector, or NULL (the default), in which case a
 #'   method is selected based on the model type.
 #' @param alpha The nominal type I error rate. Defaults to 0.05.
 #' @param ... Other values passed to emmeans.
-#'                
+#'
+#' @return A `powertable` object.
+#' 
+#' @examples
+#' 
+#' # Create synthetic data set:
+#' nrep = 8 # Number of replicates
+#' nfac = 2 # Number of treatments
+#' dat = expand.grid(Rep = factor(1:nrep),
+#'                   Trt = factor(LETTERS[1:nfac])) 
+#' dat$Y = ifelse(dat$Trt == 'A', 0, 3)
+#' 
+#' # "Fit" the model while setting residual standard deviation to 2:
+#' mod = set_glmm(Y ~ Trt, data = dat, disp = 2)
+#' 
+#' # Calculate power
+#' power_ftest(mod)
+#' 
 #' @importFrom glmmTMB glmmTMB glmmTMBControl
 #' @importFrom emmeans emmeans joint_tests
-#' @importFrom reformulas findbars RHSForm                
+#' @importFrom reformulas findbars RHSForm  
+#' @importFrom stats qf pf    
+#' @importFrom dplyr mutate rename select
+#' @importFrom rlang .data
+#'       
 #' @export
 power_ftest = function(mod, ddf = NULL, alpha = 0.05, ...){
   check_ddf(ddf)
@@ -244,18 +289,18 @@ power_ftest = function(mod, ddf = NULL, alpha = 0.05, ...){
       stop(simpleError(sprintf('%s ddf supplied for %s tests', length(ddf), nrow(jt))))
     }
     
-    jt = jt |> 
-      dplyr::mutate(df2= ddf, p.value = 1-pf(F.ratio, df1, df2))
+    jt = jt |>  
+      mutate(df2 = ddf,  p.value = 1-pf(.data$F.ratio, .data$df1, .data$df2))
   }
   
   pow = jt |>
-    dplyr::rename(Term = `model term`, NumDF = df1, DenDF = df2,
-                  Fval = F.ratio, Pval = p.value) |> 
-    dplyr::mutate(NC_param = Fval*NumDF,
-                  Fcrit = qf(1-alpha, NumDF, DenDF, 0),
-                  Power = 1-pf(Fcrit, NumDF, DenDF, ncp = NC_param)) |>
-    dplyr::select(Term, NumDF, DenDF,
-                  Fval, Fcrit, Pval, Power)
+    rename(Term = "model term", NumDF = "df1", DenDF = "df2",
+                  Fval = "F.ratio", Pval = "p.value") |> 
+    dplyr::mutate(NC_param = .data$Fval*.data$NumDF,
+                  Fcrit = qf(1-alpha, .data$NumDF, .data$DenDF, 0),
+                  Power = 1-pf(.data$Fcrit, .data$NumDF, .data$DenDF, ncp = .data$NC_param)) |>
+    dplyr::select('Term', 'NumDF', 'DenDF',
+                  'Fval', 'Fcrit', 'Pval', 'Power')
   attr(pow, 'alpha') = alpha
   attr(pow, 'ddf') = df_final$ddf
   
@@ -276,12 +321,40 @@ power_ftest = function(mod, ddf = NULL, alpha = 0.05, ...){
 #' @param n_sims Numeric. The number of simulations to use for calculating
 #'               type M error rate. If set to zero, the closed form, asymptotic
 #'               calculations are used.
-#' @param ... Other arguments passed to emmeans::contrast.         
+#' @param ... Other arguments passed to emmeans::contrast.  
+#' 
+#' @return A `powertable` object.       
+#' 
+#' @examples
+#' 
+#' library(emmeans)
+#' 
+#' # Create synthetic data set:
+#' nrep = 8 # Number of replicates
+#' nfac = 2 # Number of treatments
+#' dat = expand.grid(Rep = factor(1:nrep),
+#'                   Trt = factor(LETTERS[1:nfac])) 
+#' dat$Y = ifelse(dat$Trt == 'A', 0, 3)
+#' 
+#' # "Fit" the model while setting residual standard deviation to 2:
+#' mod = set_glmm(Y ~ Trt, data = dat, disp = 2)
+#' 
+#' # Create emmeans object:
+#' emm = emmeans(mod, ~ Trt)
+#' 
+#' # Define contrasts (here there is only one):
+#' contr = list('A-B' = c(1, -1))
+#' 
+#' # Calculate power of the contrast
+#' power_contrast(emm, contr)
 #' 
 #' @importFrom emmeans emmeans contrast    
 #' @importFrom glmmTMB glmmTMB
 #' @importFrom retrodesign retrodesign retro_design_closed_form               
 #' @importFrom reformulas findbars
+#' @importFrom stats qf pf update formula
+#' @importFrom dplyr mutate rename rename_with select case_when any_of everything 
+#' @importFrom rlang .data
 #' @export
 power_contrast = function(emm, contr_list, ddf = NULL, 
                           alpha = 0.05, n_sims = 1e4, ...){
@@ -307,7 +380,7 @@ power_contrast = function(emm, contr_list, ddf = NULL,
   }
   
   if ('null' %in% names(dots)){
-    if (null != 0){
+    if (dots$null != 0){
       message(simpleMessage('Setting `null = 0`: powerutilities does not yet support non-zero null hypotheses.'))
       dots$null = 0 
     }
@@ -336,10 +409,11 @@ power_contrast = function(emm, contr_list, ddf = NULL,
     }
   }
   
-  if (identical(ddf, 'df.residual') | (is.null(ddf) & (fixed & !gen))){
-    model = eval(emm@model.info$call)
-    df_final = resolve_ddf(emm, request = ddf)
-  }
+  ## I think this is to remove
+  # if (identical(ddf, 'df.residual') | (is.null(ddf) & (fixed & !gen))){
+  #   model = eval(emm@model.info$call)
+  #   df_final = resolve_ddf(emm, request = ddf)
+  # }
   
   df_final = resolve_ddf(emm, request = ddf)
   
@@ -350,10 +424,10 @@ power_contrast = function(emm, contr_list, ddf = NULL,
     emm@dfargs = df_final$dfargs
   }
   
-  con = do.call(emmeans::contrast, c(list(emm, contr_list, ratios = FALSE), dots)) |> 
+  con = do.call(contrast, c(list(emm, contr_list, ratios = FALSE), dots)) |> 
     as.data.frame() |> 
-    dplyr::rename_with(
-      .fn = ~ dplyr::case_when(
+    rename_with(
+      .fn = ~ case_when(
         . == "z.ratio" ~ "t.ratio",
         . %in% c("lower.CL", "asymp.LCL") ~ "LCL",
         . %in% c("upper.CL", "asymp.UCL") ~ "UCL",
@@ -361,37 +435,33 @@ power_contrast = function(emm, contr_list, ddf = NULL,
       ),
       .cols = everything()
     ) |> 
-    dplyr::mutate(NumDF = 1, 
-                  DenDF = df, 
-                  Fval = t.ratio^2, 
-                  NC_param = Fval*NumDF, 
-                  Fcrit = qf(1-alpha, NumDF, DenDF, 0),
-                  Power = 1-pf(Fcrit, NumDF, DenDF, ncp = NC_param)) |> 
-    dplyr::rename_with(capwords, .cols = 1:SE) |> 
-    dplyr::rename(Pval = p.value) |> 
-    dplyr::select(Contrast:SE, 
-                  any_of(c('LCL', 'UCL')), NumDF, DenDF,  
-                  Fval, Fcrit, Pval, Power) 
+    mutate(NumDF = 1, 
+           DenDF = .data$df, 
+           Fval = .data$t.ratio^2, 
+           NC_param = .data$Fval*.data$NumDF, 
+           Fcrit = qf(1-alpha, .data$NumDF, .data$DenDF, 0),
+           Power = 1-pf(.data$Fcrit, .data$NumDF, .data$DenDF, ncp = .data$NC_param)) |> 
+    rename_with(capwords, .cols = 1:SE) |> 
+    rename(Pval = "p.value") |> 
+    select(Contrast:SE, 
+           any_of(c('LCL', 'UCL')), 'NumDF', 'DenDF',  
+           'Fval', 'Fcrit', 'Pval', 'Power') 
   
-  retro_fun = ifelse(n_sims == 0,
-                     retro_design_closed_form, 
-                     retrodesign)
   if (n_sims == 0){
-    more_errs = with(con, mapply(retro_design_closed_form,
-                                 A = Estimate, s = SE, 
-                                 MoreArgs = list(alpha = alpha))) 
+    more_errs = mapply(retro_design_closed_form,
+                       A = con$Estimate, s = con$SE, 
+                       MoreArgs = list(alpha = alpha))
   } else {
-    more_errs = with(con, mapply(retrodesign,
-                                 A = Estimate, s = SE, df = DenDF,
-                                 MoreArgs = list(alpha = alpha, 
-                                                 n.sims = n_sims))) 
+    more_errs = mapply(retrodesign,
+                       A = con$Estimate, s = con$SE, df = con$DenDF,
+                       MoreArgs = list(alpha = alpha, n.sims = n_sims))
   }
   
   con$TypeS  = unlist(more_errs['type_s', ])
   con$TypeM = unlist(more_errs['type_m', ])
   
   out = con |> 
-    dplyr::mutate(TypeM = ifelse(abs(Estimate) < 1.5e-8, Inf, TypeM))
+    mutate(TypeM = ifelse(abs(.data$Estimate) < 1.5e-8, Inf, .data$TypeM))
   
   attr(out, 'alpha') = alpha
   attr(out, 'ddf') = df_final$ddf

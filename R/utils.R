@@ -105,6 +105,7 @@ covstruct_dispatch = list(
 )
 
 #' @noRd
+#' @importFrom stats qlogis 
 cor_convert_dispatch = list(
   us = function(x, ...){
     put_cor(C = x,  input_val = 'vec')
@@ -170,22 +171,41 @@ common_prefix = function(x) {
 #' @param mod A glmmTMB model.
 #' @param ... Ignored. 
 #' 
+#' @return Numeric. The value of the (estimated or specified) residual dispersion in the model.
+#' 
+#' @examples
+#' 
+#' # Create synthetic data set:
+#' nrep = 8 # Number of replicates
+#' nfac = 2 # Number of treatments
+#' dat = expand.grid(Rep = factor(1:nrep),
+#'                   Trt = factor(LETTERS[1:nfac])) 
+#' dat$Y = ifelse(dat$Trt == 'A', 0, 3)
+#' 
+#' # "Fit" the model while setting residual standard deviation to 2:
+#' mod = set_glmm(Y ~ Trt, data = dat, disp = 2)
+#' 
+#' # Extract residual SD:
+#' extract_disp(mod)
+#' 
 #' @export
 extract_disp = function(mod, ...){
   pars = mod$obj$env$parList()
   if ('betadisp' %in% names(pars)){
-    exp(pars$betadisp)
+    disp = exp(pars$betadisp)
   } else if ('betad' %in% names(pars)) {
-    exp(pars$betad)
+    disp = exp(pars$betad)
   } else {
     stop(simpleError('Models on the residual dispersion are not currently supported'))
   }
+  return(disp)
 }
 
 #' @importFrom reformulas RHSForm nobars
 #' @importFrom emmeans emmeans
 #' @importFrom pbkrtest Lb_ddf
-#' @importFrom glmmTMB glmmTMB
+#' @importFrom glmmTMB glmmTMB getME
+#' @importFrom stats df.residual family vcov formula
 resolve_ddf = function(object, request){
   if (inherits(object, 'glmmTMB')){
     model = object
@@ -212,7 +232,7 @@ resolve_ddf = function(object, request){
   }
   
   dfres_dffun = function(k, dfargs){
-    stats::df.residual(dfargs$object)
+    df.residual(dfargs$object)
   }
   
   dfres_dfarg = function(model){
@@ -229,7 +249,7 @@ resolve_ddf = function(object, request){
     nna = apply(V, 1, \(x){!all(is.na(x))})
     Phi = V[nna, nna]
     S = glmmTMB:::.get_SigmaG(model)
-    X = glmmTMB::getME(model, "X")
+    X = getME(model, "X")
     aVs = glmmTMB:::.vcovAdj16_internal(Phi, S, X)  
     #aV[nna, nna] = as.matrix(aVs)
     #dimnames(aV) = dimnames(V)
@@ -288,7 +308,8 @@ resolve_ddf = function(object, request){
       }
     }
   }
-  list(dffun = fun, dfargs = args, ddf = ddf)
+  out = list(dffun = fun, dfargs = args, ddf = ddf)
+  return(out)
 }
 
 capwords <- function(s, strict = FALSE) {

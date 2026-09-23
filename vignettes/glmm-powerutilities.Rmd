@@ -27,7 +27,8 @@ This vignette assumes you have already familiarized yourself with the basic oper
 Load all required packages:
 
 ```{r, warning=F, message=F}
-library(tidyverse)
+library(dplyr)
+library(tidyr)
 library(glmmTMB)
 library(powerutilities)
 library(emmeans)

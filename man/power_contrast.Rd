@@ -24,6 +24,33 @@ calculations are used.}
 
 \item{...}{Other arguments passed to emmeans::contrast.}
 }
+\value{
+A \code{powertable} object.
+}
 \description{
 This function calculates the power of contrasts.
+}
+\examples{
+
+library(emmeans)
+
+# Create synthetic data set:
+nrep = 8 # Number of replicates
+nfac = 2 # Number of treatments
+dat = expand.grid(Rep = factor(1:nrep),
+                  Trt = factor(LETTERS[1:nfac])) 
+dat$Y = ifelse(dat$Trt == 'A', 0, 3)
+
+# "Fit" the model while setting residual standard deviation to 2:
+mod = set_glmm(Y ~ Trt, data = dat, disp = 2)
+
+# Create emmeans object:
+emm = emmeans(mod, ~ Trt)
+
+# Define contrasts (here there is only one):
+contr = list('A-B' = c(1, -1))
+
+# Calculate power of the contrast
+power_contrast(emm, contr)
+
 }

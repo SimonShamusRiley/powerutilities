@@ -103,7 +103,8 @@ First, we get our R environment ready:
 #| warning: false
 
 # Load packages
-library(tidyverse)
+library(dplyr)
+library(tidyr)
 library(emmeans)
 library(powerutilities)
 ```

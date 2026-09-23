@@ -11,7 +11,26 @@ extract_disp(mod, ...)
 
 \item{...}{Ignored.}
 }
+\value{
+Numeric. The value of the (estimated or specified) residual dispersion in the model.
+}
 \description{
 This is a helper function used for getting \code{sigma()} when it is not estimated
 but fixed.
+}
+\examples{
+
+# Create synthetic data set:
+nrep = 8 # Number of replicates
+nfac = 2 # Number of treatments
+dat = expand.grid(Rep = factor(1:nrep),
+                  Trt = factor(LETTERS[1:nfac])) 
+dat$Y = ifelse(dat$Trt == 'A', 0, 3)
+
+# "Fit" the model while setting residual standard deviation to 2:
+mod = set_glmm(Y ~ Trt, data = dat, disp = 2)
+
+# Extract residual SD:
+extract_disp(mod)
+
 }

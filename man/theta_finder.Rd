@@ -13,6 +13,10 @@ theta_finder(formula, data, ...)
 
 \item{...}{Other arguments passed to \code{glmmTMB}.}
 }
+\value{
+A 'retermslist' object numbering each of the random effect variances
+and correlations implied by the model formula.
+}
 \description{
 When performing a "plug-in" power analysis, the values for the random effects
 must be supplied in the order in which they are saved internally in the glmmTMB
@@ -22,10 +26,9 @@ a model formula and a data set and outputs a table enumerating all the implied r
 effects and their ordering.
 }
 \examples{
+\dontshow{if (requireNamespace("agridat", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 
 library(dplyr)
-library(agridat)
-library(powerutilities)
 
 # Following the original analysis by Cornelius and Archbold, row x spacing 
 # is treated as main-plots, and stock within main-plots as sub-plots.
@@ -65,4 +68,5 @@ theta_finder(formula = ssp_cov_mod, data = apple_des2)
 bad_mod = ~ spacing*stock*gen + (1|rep) + (1|rep/mp)
 
 try(theta_finder(formula = bad_mod, data = apple_des))
+\dontshow{\}) # examplesIf}
 }
