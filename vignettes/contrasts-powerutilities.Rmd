@@ -356,9 +356,9 @@ Also note that, since this is a 2x2 factorial, there is only one contrast for ea
 
 9)  In the presence of a significant interaction, the main effects estimates can no longer be interpreted as *the* effect of a treatment, and it becomes necessary to consider the simple effects (i.e. the effect of the treatment at specific levels of the other treatment) instead
 
-## Polynomial Contrasts
+# Polynomial Contrasts
 
-Coming Soon!
+Forthcoming
 
 # References
 

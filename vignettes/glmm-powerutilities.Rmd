@@ -120,9 +120,9 @@ Turning now to the contrasts, we start by calculating the marginal means for the
 (ex1b_emm = emmeans(ex1b_mod, ~Insecticide:Application, type = 'response'))
 ```
 
-Next, we will focus on two constrasts specifically, not because they are necessarily very interseting in the context of our hypothetical study but because they highlight an additional complication that arrises specifically for generalized linear models and generalized linear mixed models which are not present for normal data. 
+Next, we will focus on two contrasts specifically, not because they are necessarily very interesting in the context of our hypothetical study but because they highlight an additional complication that arises specifically for generalized linear models and generalized linear mixed models which are not present for normally distributed data. 
 
-The key item to remember when considering these two contrasts is that the difference between the treatments being compared is the same for both contrasts: 0.1.
+The key item to remember when considering these two contrasts is that the difference in proportions between the treatments being compared is the same for both contrasts: 0.1.
 
 ```{r}
 ex1_contr_list = list('Sesame Curative - Control' = c(-1, 0, 1, 0, 0, 0), 
@@ -132,10 +132,13 @@ ex1_contr_list = list('Sesame Curative - Control' = c(-1, 0, 1, 0, 0, 0),
 ```{r}
 power_contrast(ex1a_emm, ex1_contr_list)
 ```
+We are warned that power calculations must be performed on the link scale, and that those differences are *not* consistent between the two comparisons. As a result, the power of these two tests differ. 
 
 # Example 2: A Randomized Complete Block Design and Gamma-Distributed Data
 
-Coming Soon!
+Forthcoming...
+
+
 
 
 

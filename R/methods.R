@@ -8,6 +8,7 @@
 #' than the p-value and power. 
 #' @param pdigits Integer. The number of digits to print for the p-value and 
 #' power columns
+#' @param ... unused
 #' @export
 print.powertable = function(x, digits = 1, pdigits = getOption('pdigits', default = 4), ...){
   

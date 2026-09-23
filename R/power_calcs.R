@@ -29,7 +29,7 @@
 #' ssp_mod = ~ spacing*stock*gen + (1|rep/mp/sp)
 #' 
 #' # The first theta value corresponds to to the standard deviation among 
-#' #  sub-plots, the second theta value correspondss to the of the standard deviation
+#' #  sub-plots, the second theta value corresponds to the of the standard deviation
 #' #  main-plots and the third theta value corresponds to the standard deviation
 #' #  among blocks:
 #' theta_finder(formula = ssp_mod, data = apple_des)
@@ -40,9 +40,9 @@
 #' apple_des2 = apple_des |> 
 #'   mutate(pH = 7)
 #' 
-#' # Note that mp and sp are already explicitely defined in terms of their
+#' # Note that mp and sp are already explicitly defined in terms of their
 #' # nesting structure, so defining them here is terms of their interactions
-#' # isn't really neccessary
+#' # isn't really necessary
 #' ssp_cov_mod = ~ spacing*stock*gen + (1|rep) + (1|rep:mp) + (pH + 1|rep:mp:sp)
 #' 
 #' # Not one but two new theta values have been added to the model: we also

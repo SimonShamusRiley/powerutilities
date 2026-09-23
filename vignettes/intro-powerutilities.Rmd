@@ -25,7 +25,7 @@ Loosely speaking, statistical power can be thought of as our capacity to avoid i
 
 - Larger sample sizes
 - More efficient experimental designs
-- Lower residual dispersion (i.e., variation among experimental units treated alike)
+- Lower experimental error (i.e., variation among experimental units treated alike)
 - Larger true difference in the parameters being compared
 
 Of these factors, the sample size and the experimental design are the two under the most direct control of the experimenter. Diligence and care in the conduct of the experiment can help reduce the residual dispersion to a degree, but some level of background noise is inevitable. And the true difference between the parameters being compared is, of course, entirely outside the control of the researcher. Thus, the focus during the planning stages is usually on determining the required sample size to achieve some pre-specified power level (given some experimental design), determining the power of a test based on the number of available replicates (again, assuming a particular experimental design), or determining which of several candidate designs will maximize the statistical power given some number of replicates. In all of these cases, the true magnitude of the difference and the magnitude of the residual variance is assumed known, usually being based on the results of a pilot study, on findings from previously published studies, or from educated guesswork.  
@@ -253,7 +253,7 @@ While still low, the power of our test among genotypes has jumped from about 8.7
 
 # Example 3: A Study for Estimating and Comparing Trends
 
-In many experiments we are not interested in the response at some specific levels of an experimental factor, but rather we're interested in estimating and comparing the trend in the response as a function of our predictor. In this example we'll continue working with the same experiment as the previous example, but this time acknowledging that the nitrogen application rates are a continuous value, not really discrete categories. To start, let's re-create the data set, but this time witout setting nitro as a factor:
+In many experiments we are not interested in the response at some specific levels of an experimental factor, but rather we're interested in estimating and comparing the trend in the response as a function of our predictor. In this example we'll continue working with the same experiment as the previous example, but this time acknowledging that the nitrogen application rates are a continuous value, not really discrete categories. To start, let's re-create the data set, but this time without setting nitro as a factor:
 
 ```{r}
 ex3_trt_dict = expand.grid(gen = c('GoldenRain', 'Marvellous', 'Victory'), 
@@ -297,13 +297,13 @@ For assessing the precision of our estimates in this proposed design, we then us
 ```{r}
 (ex3_emt = emtrends(ex3_mod, ~ gen, var = 'nitro', ddf = 'kenward-roger'))
 ```
-And we can use this in turn to assess the power of comparisons among different trends. Here, we can see that this design has quite low power for detecting a statistically sigficant difference in the trends of Victory and GoldenRain:
+And we can use this in turn to assess the power of comparisons among different trends. Here, we can see that this design has quite low power for detecting a statistically significant difference in the trends of Victory and GoldenRain:
 
 ```{r}
 ex3_contr1 = list('Slope Victory - Golden' = c(-1, 0, 1))
 power_contrast(ex3_emt, ex3_contr1, ddf = 'kenward-roger')
 ```
-There is an alternative way to test for differences in trends which have the advantange of generalizing to higher order polynomials, but the disadvantage of not providing a readily available estimate of the marginal slope, if that is what one's interested in. That approach uses reverts to treating our continuous predictor nitrogen as a categorical variable, and then using polynomial contrasts:
+There is an alternative way to test for differences in trends which have the advantange of generalizing to higher order polynomials, but the disadvantage of not providing a readily available estimate of the marginal slope, if that is what one's interested in. That approach reverts to treating our continuous predictor nitrogen as a categorical variable, and then using polynomial contrasts:
 
 ```{r}
 ex3_mod2 = set_glmm(yield ~ factor(nitro)*gen + (1|block/gen), data = ex3, 
