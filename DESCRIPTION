@@ -1,9 +1,28 @@
 Package: powerutilities
-Title: Tools for Power Analysis with glmmTMB
+Title: Plug-In Power Analysis for Linear and Generalized Linear Mixed Models
+Description: Tools for prospective power analysis and design planning using
+    the "plug-in" approach described by Piepho et al. (2022)
+    <doi:10.1017/S0021859622000466> and Stroup, Ptukhina and Garai (2024)
+    <doi:10.1201/9780429092060>. Expected treatment means and the proposed
+    experimental design are encoded in an artificial data set, and a model is
+    "fit" to it with random effect variances, correlations and residual
+    dispersion fixed set at user-specified values rather than being estimated.
+    The resulting standard errors are used to compute the power of F-tests and
+    user-defined contrasts, as well as Type S (sign) and Type M (magnitude)
+    error rates (Gelman and Carlin, 2014 <doi:10.1177/1745691614551642>).
+    Models are fit with 'glmmTMB', so the approach accommodates non-normal
+    responses, heteroscedasticity, nested and crossed random effects,
+    correlated random slopes, and structured covariances such as AR(1) and
+    spatial correlation. Helper functions convert standard deviations and
+    correlations into the internal parameterization of glmmTMB and report the
+    order in which random effect parameters must be supplied. Denominator
+    degrees of freedom can be computed by the Kenward-Roger, residual or
+    asymptotic methods, and contrasts are specified through 'emmeans'.
+    Vignettes cover estimated marginal means, contrast specification, and
+    worked examples for common agricultural designs.
 Version: 0.5.0
 Authors@R: 
-    person("Simon", "Riley", , "ssriley@protonmail.com", role = c("aut", "cre"))
-Description: This package contains tools for power analysis using glmmTMB and emmeans.
+    person("Simon", "Riley", email = "ssriley@protonmail.com", role = c("aut", "cre"), comment = c(ORCID = "0000-0002-4833-2026"))
 Depends: R (>= 4.1.0)
 Imports: agridat, dplyr, tibble, emmeans, reformulas, pbkrtest, glmmTMB (>= 1.1.14), retrodesign
 Suggests: 
