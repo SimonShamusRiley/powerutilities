@@ -26,7 +26,7 @@ Authors@R:
 Depends: R (>= 4.1.0)
 Imports: dplyr, emmeans,  glmmTMB (>= 1.1.14), pbkrtest, reformulas,retrodesign, rlang
 Suggests: agridat, knitr, rmarkdown, testthat (>= 3.0.0), tidyr
-License: None, at present
+License: BSD_3_clause + file LICENSE
 URL: https://github.com/SimonShamusRiley/powerutilities/tree/main
 BugReports: https://github.com/SimonShamusRiley/powerutilities/issues
 Encoding: UTF-8
