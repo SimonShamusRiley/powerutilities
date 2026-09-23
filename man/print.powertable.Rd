@@ -14,6 +14,8 @@ than the p-value and power.}
 
 \item{pdigits}{Integer. The number of digits to print for the p-value and
 power columns}
+
+\item{...}{unused}
 }
 \description{
 This function controls the formatting when printing \code{powertable}

@@ -57,7 +57,6 @@
 #' try(theta_finder(formula = bad_mod, data = apple_des))
 
 #' @importFrom glmmTMB glmmTMB glmmTMBControl 
-#' @importFrom nlme VarCorr
 #' @importFrom reformulas formatVC findbars
 #' @export
 theta_finder = function(formula, data, ...){
