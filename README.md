@@ -2,7 +2,7 @@
 <!-- badges: start --> 
 <!-- badges: end -->
 
-This package provides some tools for power analysis when using what [Piepho et. al (2022)](http://www.doi.org/10.1017/S0021859622000466) 
+This package provides some tools for power analysis when using what [Piepho et. al (2022)](https://www.doi.org/10.1017/S0021859622000466) 
 called the "plug-in approach" to power analysis, as described in the chapter 
 *Precision, Power, Sample Size and Planning* in 
 [Generalized Linear Mixed Models: Modern Concepts, Methods and Applications](https://www.taylorfrancis.com/chapters/mono/10.1201/9780429092060-24/precision-power-sample-size-planning-walter-stroup-marina-ptukhina-julie-garai?context=ubx&refId=7081f25c-0d97-41eb-b09c-a81ef861e2ef).

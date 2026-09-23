@@ -7,7 +7,7 @@
 power_ftest(mod, ddf = NULL, alpha = 0.05, ...)
 }
 \arguments{
-\item{mod}{A \code{\link{glmmTMB}} model}
+\item{mod}{A \code{glmmTMB} model}
 
 \item{ddf}{Either a method for calculating denominator degrees of freedom (
 currently supported options are "df.residual", "asymptotic" and
