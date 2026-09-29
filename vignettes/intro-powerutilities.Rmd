@@ -98,7 +98,7 @@ In addition to the F-test, we are usually also interested in assessing the power
 (ex1_emm = emmeans(ex1_mod, ~Trt)) # Estimated treatment means
 ```
 
-We then define our contrasts of interest as a named list, each item of which is a vector of weights. For more details on how and why we specify contrasts, refer to `vignette('contrasts-powerutilities')`. For this example there is in fact only one possible contrast: testing for a difference between treatments A and B.
+We then define our contrasts of interest as a named list, each item of which is a vector of weights. For more details on how and why we specify contrasts, refer to `vignette('contrasts-powerutilities')`. For this example there is essentially only one meaningful contrast: testing for a difference between treatments A and B.
 
 ```{r}
 contr_list = list('Trt A - Trt B' = c(1, -1))
@@ -127,13 +127,13 @@ power_contrast(ex1_emm, contr_list, ddf = 15, infer = c(T, T)) |>
   print(digits = 3)
 ```
 
-Now let's introduce a small additional complication: suppose we have reason to expect that samples given the "A" treatment in our study will have somewhat lower residual variance than samples given the "B" treatment. Will this effect the power of our test? There is no option in the `power.t.test` function to accomodate heteroscedasticity, but with `set_glmm` its quite simple:
+Now let's introduce a small additional complication: suppose we have reason to expect that samples given the "A" treatment in our study will have somewhat lower residual variance than samples given the "B" treatment. Will this effect the power of our test? There is no option in the `power.t.test` function to accomodate heteroscedasticity, but with `set_glmm` it's quite simple:
 
 ```{r}
 ex1_mod2 = set_glmm(Y ~ Trt, data = ex1, disp = c(1.75, 2.25), dispformula = ~ Trt - 1)
 ```
 
-In the code above, we've supplied two values for the dispersion parameter, and added the argument `dispformula = ~ 0+Trt`. This formula tells `glmmTMB` to model two dispersion parameters, one corresponding to level of 'Trt' (we added "-1" so that we could provide the values as the residual standard deviations, rather than as "baseline residual std. dev." and "difference from baseline residual std. dev."). We can now see that the estimated marginal means have different standard errors, reflecting their different residual standard deviations:
+In the code above, we've supplied two values for the dispersion parameter, and added the argument `dispformula = ~ Trt - 1`. This formula tells `glmmTMB` to model two dispersion parameters, one corresponding to level of 'Trt' (we added "-1" so that we could provide the values as the residual standard deviations, rather than as "baseline residual std. dev." and "difference from baseline residual std. dev."). We can now see that the estimated marginal means have different standard errors, reflecting their different residual standard deviations:
 
 ```{r}
 (ex1_emm2 = emmeans(ex1_mod2, ~Trt)) 
@@ -342,15 +342,15 @@ For those interested in learning more about the use of polynomial and other type
 
 # Example 4: A Repeated Measures Study with AR(1) Correlation Structure
 
-Coming soon!
+Forthcoming
 
 # Example 5: Data with a Gaussian Spatial Correlation Structure
 
-Coming soon! 
+Forthcoming 
 
 # Example 6: A Random Slopes Model with Correlated Slope and Intercept
 
-Coming Soon
+Forthcoming
 
 
 
