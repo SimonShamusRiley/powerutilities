@@ -17,10 +17,10 @@ Description: Tools for prospective power analysis and design planning using
     correlations into the internal parameterization of 'glmmTMB' and report the
     order in which random effect parameters must be supplied. Denominator
     degrees of freedom can be computed by the Kenward-Roger, residual or
-    asymptotic methods, and contrasts are specified through 'emmeans'.
-    Vignettes cover estimated marginal means, contrast specification, and
-    worked examples for common agricultural designs.
-Version: 0.6.0
+    asymptotic methods (or can be specified by users), and contrasts are
+    specified through 'emmeans'. Vignettes cover estimated marginal means,
+    contrast specification, and worked examples for common agricultural designs.
+Version: 0.7.0
 Authors@R: 
     person("Simon", "Riley", email = "ssriley@protonmail.com", role = c("aut", "cre"), comment = c(ORCID = "0000-0002-4833-2026"))
 Depends: R (>= 4.1.0)

@@ -93,7 +93,7 @@ theta_finder = function(formula, data, ...){
     terms[[i]]$Group[1, 1] = names(terms)[i]
     
     sd_start = counter
-    sd_end = counter + (nrow( terms[[i]]$`Std.Dev`)-1)
+    sd_end = counter + (nrow(terms[[i]]$`Std.Dev`)-1)
     
     terms[[i]]$`Std.Dev.`[, 2] = seq(sd_start, sd_end)
     
@@ -267,19 +267,23 @@ set_glmm = function(formula, data, re_terms = NULL, disp = NULL,
 #'       
 #' @export
 power_ftest = function(mod, ddf = NULL, alpha = 0.05, ...){
-  check_ddf(ddf)
+   check_ddf(ddf)
   
-  df_final = resolve_ddf(mod, ddf)
+  df_info = resolve_ddf(mod, ddf)
   
-  numddf = all(inherits(ddf, 'numeric'))
+  numddf = df_info$ddf == 'user-specified'
+  
   fe_form = nobars(RHSForm(formula(mod), as.form = T))
   
   dots = list(...)
-  args = c(list(object = mod, specs = fe_form), dots)
-  emm = do.call(emmeans, args)
   
-  emm@dffun = df_final$dffun
-  emm@dfargs = df_final$dfargs
+  if (numddf){
+    args = c(list(object = mod, specs = fe_form, df = 1), dots)
+  } else {
+    args = c(list(object = mod, specs = fe_form, ddf = df_info$ddf), dots)
+  }
+  
+  emm = do.call(emmeans, args)
   
   jt = joint_tests(emm) |> 
     as.data.frame()
@@ -288,8 +292,8 @@ power_ftest = function(mod, ddf = NULL, alpha = 0.05, ...){
     if (!length(ddf) %in% c(1, nrow(jt))) {
       stop(simpleError(sprintf('%s ddf supplied for %s tests', length(ddf), nrow(jt))))
     }
-    
-    jt = jt |>  
+
+    jt = jt |>
       mutate(df2 = ddf,  p.value = 1-pf(.data$F.ratio, .data$df1, .data$df2))
   }
   
@@ -302,11 +306,12 @@ power_ftest = function(mod, ddf = NULL, alpha = 0.05, ...){
     dplyr::select('Term', 'NumDF', 'DenDF',
                   'Fval', 'Fcrit', 'Pval', 'Power')
   attr(pow, 'alpha') = alpha
-  attr(pow, 'ddf') = df_final$ddf
+  attr(pow, 'ddf') = df_info$ddf
   
   class(pow) = c('powertable', 'data.frame')
   return(pow)
 }
+
 #' @title Power of Contrasts Performed on Models Fit with glmmTMB
 #'
 #' @description This function calculates the power of contrasts.
@@ -359,7 +364,7 @@ power_ftest = function(mod, ddf = NULL, alpha = 0.05, ...){
 power_contrast = function(emm, contr_list, ddf = NULL, 
                           alpha = 0.05, n_sims = 1e4, ...){
   if (!inherits(emm, 'emmGrid')){
-    stop(simpleError('"emm" must be the result of a call to emmeans()'))
+    stop(simpleError('"emm" must be an emmGrid object'))
   } 
   if (!inherits(alpha, 'numeric') | alpha > 1 | alpha < 0){
     stop(simpleError('alpha must be a numeric value between 0 and 1'))
@@ -395,6 +400,7 @@ power_contrast = function(emm, contr_list, ddf = NULL,
   
   fixed = is.null(findbars(formula(emm@model.info$call)))
   numddf = inherits(ddf, 'numeric')
+  
   if (numddf & length(ddf) > 1){
     warning(simpleWarning('multiple ddf values supplied, only the first will be used'))
   }
@@ -409,20 +415,10 @@ power_contrast = function(emm, contr_list, ddf = NULL,
     }
   }
   
-  ## I think this is to remove
-  # if (identical(ddf, 'df.residual') | (is.null(ddf) & (fixed & !gen))){
-  #   model = eval(emm@model.info$call)
-  #   df_final = resolve_ddf(emm, request = ddf)
-  # }
+  df_info = resolve_ddf(emm, request = ddf)
   
-  df_final = resolve_ddf(emm, request = ddf)
-  
-  if (numddf){
-    emm = update(emm, df = ddf)
-  } else {
-    emm@dffun = df_final$dffun
-    emm@dfargs = df_final$dfargs
-  }
+  emm@dfargs = df_info$dfargs
+  emm@dffun = df_info$dffun
   
   con = do.call(contrast, c(list(emm, contr_list, ratios = FALSE), dots)) |> 
     as.data.frame() |> 
@@ -464,7 +460,7 @@ power_contrast = function(emm, contr_list, ddf = NULL,
     mutate(TypeM = ifelse(abs(.data$Estimate) < 1.5e-8, Inf, .data$TypeM))
   
   attr(out, 'alpha') = alpha
-  attr(out, 'ddf') = df_final$ddf
+  attr(out, 'ddf') = df_info$ddf
   
   class(out) = c('powertable', 'data.frame')
   return(out)

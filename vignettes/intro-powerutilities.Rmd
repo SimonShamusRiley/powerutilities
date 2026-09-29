@@ -139,7 +139,6 @@ In the code above, we've supplied two values for the dispersion parameter, and a
 (ex1_emm2 = emmeans(ex1_mod2, ~Trt)) 
 ```
 Here, we can see that this results in a very minor loss of power, from .7965 to .7904.  
-
 ```{r}
 power_contrast(ex1_emm2, contr_list) |> 
   print(digits = 3)

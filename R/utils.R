@@ -201,114 +201,120 @@ extract_disp = function(mod, ...){
   return(disp)
 }
 
+#' @noRd
+#' @importFrom stats family 
+is_gaus_mod = function(emm){
+  call = as.list(emm@model.info$call)
+  family_arg = ifelse('family' %in% names(call), TRUE, FALSE)
+  
+  if (family_arg) {
+    if (call$family$family == 'gaussian' & call$family$link == 'identity') {
+      gaus = TRUE
+    } else {
+      gaus = FALSE
+    }
+  } else {
+    gaus = TRUE
+  } 
+  return(gaus)
+}
+
+#' @noRd
+is_reml = function(emm) {
+  call = as.list(emm@model.info$call)
+  reml_arg = ifelse('REML' %in% names(call), TRUE, FALSE)
+  
+  if (reml_arg) {
+    if (call$REML == TRUE) {
+      reml = TRUE
+    } else {
+      reml = FALSE
+    }
+  } else {
+    reml = TRUE
+  } 
+  return(reml)
+}
+
+#' @noRd
+#' @importFrom stats formula
+#' @importFrom reformulas findbars
+is_fe_mod = function(emm){
+  is.null(findbars(formula(emm@model.info$call)))
+}
+
 #' @importFrom reformulas RHSForm nobars
 #' @importFrom emmeans emmeans
 #' @importFrom pbkrtest Lb_ddf
-#' @importFrom glmmTMB glmmTMB getME
-#' @importFrom stats df.residual family vcov formula
-resolve_ddf = function(object, request){
-  if (inherits(object, 'glmmTMB')){
+#' @importFrom glmmTMB glmmTMB getME dof_KR
+#' @importFrom stats df.residual vcov formula
+resolve_ddf = function(object, request = NULL){
+   if (inherits(object, 'glmmTMB')){
     model = object
     fe_form = nobars(RHSForm(formula(object), as.form = T))
-    emm = emmeans(object, fe_form)
+    emm = emmeans(object, specs = fe_form)
   } else if (inherits(object, 'emmGrid')){
     emm = object
-    model = eval(emm@model.info$call)
   } else {
     stop(simpleError('object should be a glmmTMB model or emmGrid object constructed from one'))
   }
   
-  fixed = is.null(findbars(formula(model)))
+  fixed = is_fe_mod(emm)
+  gaus = is_gaus_mod(emm)
+  
   numddf = inherits(request, 'numeric')
   
-  gaus = TRUE
-  
-  if (family(model)$family != 'gaussian' | family(model)$link != 'identity'){
-      gaus = FALSE
-  }
-  
-  asymp_dffun = function(k, dfargs){
-    Inf
-  }
-  
-  dfres_dffun = function(k, dfargs){
-    df.residual(dfargs$object)
-  }
-  
-  dfres_dfarg = function(model){
-    list(object = model)
-  }
-  
-  kr_dffun = function(k, dfargs){
-    Lb_ddf(k, dfargs$unadjV, dfargs$adjV)
-  }
-  
-  kr_dfarg = function(model) {
-    V = vcov(model)$cond
-    aV = array(dim = dim(V))
-    nna = apply(V, 1, \(x){!all(is.na(x))})
-    Phi = V[nna, nna]
-    S = glmmTMB:::.get_SigmaG(model)
-    X = getME(model, "X")
-    aVs = glmmTMB:::.vcovAdj16_internal(Phi, S, X)  
-    #aV[nna, nna] = as.matrix(aVs)
-    #dimnames(aV) = dimnames(V)
-    #list(unadjV = V, adjV = aV)
-    list(unadjV = Phi, adjV = aVs)
-  }
-  
-  usr_dffun = function(k, dfargs){
-    0
-  }
-  
-  if (numddf){
-      fun = usr_dffun
-      ddf = 'user-supplied'
-      args = list(NULL)
-  } else if (is.null(request)){
+  # Define default DDF method when none is specified
+  if (is.null(request)){
     if (gaus){
       if (fixed){
-        fun = dfres_dffun
-        args = dfres_dfarg(model)
-        ddf = 'df.residual'
+          ddf = 'df.residual'
+        } else {
+          ddf = 'kenward-roger'
+        }
       } else {
-        fun = kr_dffun
-        args = kr_dfarg(model)
-        ddf = 'kenward-roger'
-      }} else {
-      fun = asymp_dffun
-      args = list(NULL)
-      ddf = 'asymptotic'
-    } 
-  } else if (request == 'asymptotic'){
-    fun = asymp_dffun
-    args = list(NULL)
-    ddf = 'asymptotic'
-  } else if (request == 'df.residual'){
-    fun = dfres_dffun
-    args = dfres_dfarg(model)
-    ddf = 'df.residual'
-  } else if (request == 'kenward-roger'){
-    if (gaus & !fixed){
-      fun = kr_dffun
-      args = kr_dfarg(model)
-      ddf = 'kenward-roger'
-    } else {
-      if (!gaus){
-        message(simpleMessage('kenward-roger DenDFs are available for gaussian mixed models only, switching to asymptotic DenDFs'))
-        fun = asymp_dffun
-        args = list(NULL)
         ddf = 'asymptotic'
       }
-      if (gaus & fixed) {
-        message(simpleMessage('kenward-roger DenDFs are available for gaussian mixed models only, switching to residual DenDFs'))
-        fun = dfres_dffun
-        args = dfres_dfarg(model)
-        ddf = 'df.residual'
+  } else if (numddf){
+    ddf = 'user-specified'
+  } else {
+    ddf = request
+  }
+  
+  # Provide warnings and/or corrections for potentially inappropriate ddf specifications
+  if (!is_reml(emm) & ddf == 'kenward-roger'){
+    ddf = 'asymptotic'
+    message(simpleMessage('kenward-roger is only appropriate for models fit with REML, switching to ddf = "asymptotic"'))
+  }
+  
+  if (gaus & !fixed & ddf != 'kenward-roger'){
+    message(simpleMessage('For gaussian mixed models, it is recomended to use ddf = "kenward-roger"'))
+  }
+  
+  if (gaus & fixed & ddf == 'asymptotic'){
+    message(simpleMessage('For gaussian fixed-effects models, it is recommended to use ddf = "df.residual"'))
+  }
+ 
+  if (inherits(object, 'emmGrid')){
+    if (!numddf){
+      if (ddf %in% c('df.residual', 'kenward-roger')){
+        model = eval(emm@model.info$call)
       }
     }
   }
-  out = list(dffun = fun, dfargs = args, ddf = ddf)
+  
+  dfargs = switch(ddf, 
+                  asymptotic = list(), 
+                  df.residual = list(object = eval(emm@model.info$call)), 
+                  `kenward-roger` = list(V = vcov(model)$cond, 
+                                       adjV = attr(dof_KR(model), 'vcov')), 
+                  `user-specified` = list(df = request))
+  dffun = switch(ddf, 
+                 asymptotic = \(k, dfargs){Inf}, 
+                 df.residual = \(k, dfargs){df.residual(dfargs$object)}, 
+                 `kenward-roger` = \(k, dfargs){Lb_ddf(k, dfargs$V, dfargs$adjV)}, 
+                 `user-specified` = \(k, dfargs){dfargs$df})
+  out = list(dffun = dffun, dfargs = dfargs, ddf = ddf)
   return(out)
 }
 

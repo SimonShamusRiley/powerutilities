@@ -25,6 +25,7 @@ importFrom(emmeans,
   joint_tests
 )
 importFrom(glmmTMB,
+  dof_KR,
   getME,
   glmmTMB,
   glmmTMBControl
