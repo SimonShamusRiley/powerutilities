@@ -231,7 +231,7 @@ is_reml = function(emm) {
       reml = FALSE
     }
   } else {
-    reml = TRUE
+    reml = FALSE
   } 
   return(reml)
 }
@@ -282,10 +282,15 @@ resolve_ddf = function(object, request = NULL){
   }
   
   # Provide warnings and/or corrections for potentially inappropriate ddf specifications
-  if (!is_reml(emm) & ddf == 'kenward-roger'){
-    ddf = 'asymptotic'
-    message(simpleMessage('kenward-roger is only appropriate for models fit with REML, switching to ddf = "asymptotic"'))
-  }
+  if (ddf == 'kenward-roger'){
+    if (fixed & gaus){
+        ddf = 'df.residual'
+        message(simpleMessage('kenward-roger is only appropriate for models fit with REML, switching to ddf = "df.residual"'))
+      } else if (!is_reml(emm)){
+        ddf = 'asymptotic'
+        message(simpleMessage('kenward-roger is only appropriate for models fit with REML, switching to ddf = "asymptotic"'))
+      }
+    }
   
   if (gaus & !fixed & ddf != 'kenward-roger'){
     message(simpleMessage('For gaussian mixed models, it is recomended to use ddf = "kenward-roger"'))

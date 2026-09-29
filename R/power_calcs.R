@@ -267,7 +267,7 @@ set_glmm = function(formula, data, re_terms = NULL, disp = NULL,
 #'       
 #' @export
 power_ftest = function(mod, ddf = NULL, alpha = 0.05, ...){
-   check_ddf(ddf)
+  check_ddf(ddf)
   
   df_info = resolve_ddf(mod, ddf)
   
@@ -284,6 +284,8 @@ power_ftest = function(mod, ddf = NULL, alpha = 0.05, ...){
   }
   
   emm = do.call(emmeans, args)
+  emm@dfargs = df_info$dfargs
+  emm@dffun = df_info$dffun
   
   jt = joint_tests(emm) |> 
     as.data.frame()
