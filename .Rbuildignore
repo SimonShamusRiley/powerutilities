@@ -3,3 +3,4 @@
 ^doc$
 ^Meta$
 R/tests.R
+^cran-comments\.md$

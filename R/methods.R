@@ -9,6 +9,7 @@
 #' @param pdigits Integer. The number of digits to print for the p-value and 
 #' power columns
 #' @param ... Unused
+#' @returns Invisibly returns `x`
 #' @importFrom stats qt
 #' @importFrom dplyr mutate across any_of where
 #' @importFrom rlang .data
@@ -51,8 +52,15 @@ print.powertable = function(x, digits = 1, pdigits = getOption('pdigits', defaul
   print.data.frame(out)
   
   cat(paste0('\nDegrees-of-freedom method: ', attr(x, 'ddf'), '\n\u03B1 = ', attr(x, 'alpha'), '\n'))
+  
+  invisible(x)
 }
 
+#' @title Printing powertables with knitr
+#' @description
+#' Provides a method for outputting powertables as html
+#' @param x A `powertable` object to be printed
+#' @return Invisibly returns `x`
 #' @exportS3Method knitr::knit_print
 #' @importFrom utils capture.output
 knit_print.powertable = function(x, ...) {
@@ -62,8 +70,14 @@ knit_print.powertable = function(x, ...) {
   } else {
     knitr::asis_output(paste0("\n```\n", out, "\n```\n"))
   }
+  invisible(x)
 }
 
+#' @title Printing retermslist objects
+#' @description
+#' Provides a method formatting and displaying retermslist objects
+#' @param x A `powertable` object to be printed
+#' @return Invisibly returns `x`
 #'@export
 print.retermslist = function(x, ...) {
   pad_columns <- function(mat_list, cols) {
@@ -93,4 +107,5 @@ print.retermslist = function(x, ...) {
     prmatrix(comb_terms[[n]], quote = F, na.print = '', rowlab = rep('', nrow(comb_terms[[n]])))
     cat('\n')
   }
+  invisible(x)
 }

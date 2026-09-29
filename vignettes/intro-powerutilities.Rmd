@@ -16,7 +16,7 @@ knitr::opts_chunk$set(
   comment = '#>'
 )
 
-options(width = 200)
+old = options(width = 200)
 ```
 
 # Introduction
@@ -155,7 +155,7 @@ Which when $s = 2$ and $n = 8$ for both groups becomes:
 $$\sqrt{\frac{2*2^2}{8}} = 1$$
 Whereas keeping $n = 8$ for both groups but setting $s_1 = 1.75$ and $s_2 = 2.25$, we get:
 
-$$\sqrt{\frac{1.75^2}{8} + \frac{2.25}{8}} \approx 1.0078$$
+$$\sqrt{\frac{1.75^2}{8} + \frac{2.25^2}{8}} \approx 1.0078$$
 The effect is small, but real: heteroscedasticity has increased the standard error of the difference, which will reduce power. We've now seen that for this simple example the "plug-in" method produces the same results as the basic power equations do. However, this "plug-in" approach will also work for a much wider variety of designs/models than we have tools for in base R or that are convenient to work though by hand or from first principles. 
 
 # Example 2: A Split-Plot Randomized Complete Block Design
@@ -340,17 +340,19 @@ power_contrast(ex3_emm3, poly.emmc)
 ```
 For those interested in learning more about the use of polynomial and other types of contrasts, I strongly recommend the articles by Pearce entitled "Data Analysis in Agricultural Experimentation" [Part I: Contrasts of Interest](https://www.doi.org/10.1017/S0014479700019840), [Part II: Some Standard Contrasts](https://www.doi.org/10.1017/S0014479700020081), and [Part III: Multiple Comparisons](https://www.doi.org/10.1017/S0014479700020354). 
 
-# Example 4: A Repeated Measures Study with AR(1) Correlation Structure
+```{r, include = FALSE}
+## Notes for future development of the vignette
 
-Forthcoming
+# Example 4: A Repeated Measures Study with AR(1) Correlation Structure
+# Forthcoming
 
 # Example 5: Data with a Gaussian Spatial Correlation Structure
-
-Forthcoming 
+# Forthcoming 
 
 # Example 6: A Random Slopes Model with Correlated Slope and Intercept
+# Forthcoming
 
-Forthcoming
-
+options(old)
+```
 
 
