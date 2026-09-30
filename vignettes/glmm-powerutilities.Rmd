@@ -36,7 +36,7 @@ library(emmeans)
 
 # Example 1: A Randomized Complete Block Design and Binomial Data
 
-This example is inspired by the work of [Ataide et al (2025)](https://www.mdpi.com/2077-0472/15/13/1451). The hypothetical planned experiment is a 3x2 factorial of insecticide treatments (spinosad and sesame oil, along with a water control) and application method (prophylactic or curative). Plants are arranged in a randomized complete block design, and then thrips will be introduced into each plant to observe the mortality rate. For illustration purposes, lets imagine we have a total of 240 thrips and the question is whether to arrange them such that there are 4 blocks with 10 thrips on each plant or 8 blocks with 5 thrips on each plant. We start by creating our treatment dictionary containing all combinations of our treatments:
+This example is inspired by the work of [Ataide et al (2025)](https://doi.org/10.3390/agriculture15131451). The hypothetical planned experiment is a 3x2 factorial of insecticide treatments (spinosad and sesame oil, along with a water control) and application method (prophylactic or curative). Plants are arranged in a randomized complete block design, and then thrips will be introduced into each plant to observe the mortality rate. For illustration purposes, lets imagine we have a total of 240 thrips and the question is whether to arrange them such that there are 4 blocks with 10 thrips on each plant or 8 blocks with 5 thrips on each plant. We start by creating our treatment dictionary containing all combinations of our treatments:
 
 ```{r}
 ex1_trt_dict = expand.grid(Insecticide = c('Water', 'Spinosad', 'Sesame Oil'), 

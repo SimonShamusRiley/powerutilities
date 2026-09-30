@@ -5,7 +5,7 @@
 This package provides some tools for power analysis when using what [Piepho et. al (2022)](https://www.doi.org/10.1017/S0021859622000466) 
 called the "plug-in approach" to power analysis, as described in the chapter 
 *Precision, Power, Sample Size and Planning* in 
-[Generalized Linear Mixed Models: Modern Concepts, Methods and Applications](https://www.taylorfrancis.com/chapters/mono/10.1201/9780429092060-24/precision-power-sample-size-planning-walter-stroup-marina-ptukhina-julie-garai?context=ubx&refId=7081f25c-0d97-41eb-b09c-a81ef861e2ef).
+[Generalized Linear Mixed Models: Modern Concepts, Methods and Applications](https://www.doi.org/10.1201/9780429092060-24).
 
 The basic idea is to encode information about sample size and expected
 treatment means (and differences) for the proposed experiment in a fake data
@@ -36,12 +36,12 @@ think are not as fully or widely appreciated as they should be.
 
 **Please note that this effort remains very much a work in progress**. Any issues,
 concerns, questions, bugs, feature requests, etc., can be posted on the 
-[Issues page](https://github.com/SimonShamusRiley/powerutilities/issues).
+Issues page (https://github.com/SimonShamusRiley/powerutilities/issues).
 
 ## Installation
 
 You can install the development version of powerutilities from
-[GitHub](https://github.com/) with:
+Github with:
 
 ``` r
 install.packages("devtools")
