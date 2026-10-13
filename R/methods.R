@@ -9,7 +9,10 @@
 #' @param pdigits Integer. The number of digits to print for the p-value and 
 #' power columns
 #' @param ... Unused
-#' @returns Invisibly returns `x`
+#' @return The input `x` (a `powertable` object), returned invisibly. Called
+#'   for its side effect of printing the table with p-values, power and
+#'   estimates rounded for display, followed by the degrees-of-freedom method
+#'   and significance level used.
 #' @importFrom stats qt
 #' @importFrom dplyr mutate across any_of where
 #' @importFrom rlang .data
@@ -76,9 +79,13 @@ knit_print.powertable = function(x, ...) {
 #' @title Printing retermslist objects
 #' @description
 #' Provides a method formatting and displaying retermslist objects
-#' @param x A `powertable` object to be printed
-#' @return Invisibly returns `x`
-#'@export
+#' @param x An `retermslist` object, as returned by [theta_finder()].
+#' @return The input `x` (a `retermslist` object), returned invisibly. Called
+#'   for its side effect of printing one table per random-effects term, listing
+#'   the grouping factor, the name of each random effect, and the position at
+#'   which each standard deviation and correlation must be supplied in
+#'   `re_terms` when calling [set_glmm()].
+#' @export
 print.retermslist = function(x, ...) {
   pad_columns <- function(mat_list, cols) {
     widths <- sapply(cols, function(col) {

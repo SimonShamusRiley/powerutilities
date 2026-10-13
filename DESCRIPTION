@@ -1,6 +1,6 @@
 Package: powerutilities
 Title: Power Analysis for Linear and Generalized Linear Mixed Models
-Description: Tools for prospective power analysis and design planning using
+Description: Prospective power analysis and design planning using
     the "plug-in" approach described by Piepho et al. (2022)
     <doi:10.1017/S0021859622000466> and Stroup, Ptukhina and Garai (2024)
     <doi:10.1201/9780429092060-24>. Expected treatment means and the proposed

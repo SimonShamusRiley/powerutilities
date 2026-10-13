@@ -241,7 +241,11 @@ set_glmm = function(formula, data, re_terms = NULL, disp = NULL,
 #' @param alpha The nominal type I error rate. Defaults to 0.05.
 #' @param ... Other values passed to emmeans.
 #'
-#' @return A `powertable` object.
+#' @return A `powertable` object: a data frame with one row per fixed-effect
+#'   term and columns `Term`, `NumDF`, `DenDF`, `Fval` (expected F statistic),
+#'   `Fcrit` (critical value at `alpha`), `Pval` (expected p-value) and `Power`.
+#'   Attributes `alpha` and `ddf` record the significance level and the
+#'   degrees-of-freedom method used.
 #' 
 #' @examples
 #' 
@@ -330,7 +334,32 @@ power_ftest = function(mod, ddf = NULL, alpha = 0.05, ...){
 #'               calculations are used.
 #' @param ... Other arguments passed to emmeans::contrast.  
 #' 
-#' @return A `powertable` object.       
+#' @return A `powertable` object: a data frame with one row per contrast (or
+#'   per contrast within each level of any `by` variables), containing:
+#'   \describe{
+#'     \item{`Contrast`}{The contrast name, taken from `contr_list`.}
+#'     \item{By variables}{If `emm` has `by` variables, one column for each,
+#'       identifying the group the contrast was computed within.}
+#'     \item{`Estimate`}{The expected value of the contrast, on the link scale.}
+#'     \item{`SE`}{Its standard error under the specified design and variance
+#'       parameters.}
+#'     \item{`LCL`, `UCL`}{Lower and upper confidence limits; present only if
+#'       confidence intervals are requested via `infer`.}
+#'     \item{`NumDF`, `DenDF`}{Numerator (always 1) and denominator degrees of
+#'       freedom for the test.}
+#'     \item{`Fval`}{The expected F statistic (the squared t or z ratio).}
+#'     \item{`Fcrit`}{The critical value of F at significance level `alpha`.}
+#'     \item{`Pval`}{The expected p-value.}
+#'     \item{`Power`}{The probability of rejecting the null hypothesis of a
+#'       zero contrast, given the expected estimate.}
+#'     \item{`TypeS`}{The probability that a statistically significant estimate
+#'       has the wrong sign (Gelman and Carlin, 2014).}
+#'     \item{`TypeM`}{The expected ratio of the absolute value of a
+#'       statistically significant estimate to the true value (the
+#'       exaggeration ratio). `Inf` when the true contrast is zero.}
+#'   }
+#'   The `alpha` and `ddf` attributes record the significance level and the
+#'   denominator degrees-of-freedom method used.  
 #' 
 #' @examples
 #' 

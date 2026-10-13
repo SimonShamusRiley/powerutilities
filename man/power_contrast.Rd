@@ -25,7 +25,32 @@ calculations are used.}
 \item{...}{Other arguments passed to emmeans::contrast.}
 }
 \value{
-A \code{powertable} object.
+A \code{powertable} object: a data frame with one row per contrast (or
+per contrast within each level of any \code{by} variables), containing:
+\describe{
+\item{\code{Contrast}}{The contrast name, taken from \code{contr_list}.}
+\item{By variables}{If \code{emm} has \code{by} variables, one column for each,
+identifying the group the contrast was computed within.}
+\item{\code{Estimate}}{The expected value of the contrast, on the link scale.}
+\item{\code{SE}}{Its standard error under the specified design and variance
+parameters.}
+\item{\code{LCL}, \code{UCL}}{Lower and upper confidence limits; present only if
+confidence intervals are requested via \code{infer}.}
+\item{\code{NumDF}, \code{DenDF}}{Numerator (always 1) and denominator degrees of
+freedom for the test.}
+\item{\code{Fval}}{The expected F statistic (the squared t or z ratio).}
+\item{\code{Fcrit}}{The critical value of F at significance level \code{alpha}.}
+\item{\code{Pval}}{The expected p-value.}
+\item{\code{Power}}{The probability of rejecting the null hypothesis of a
+zero contrast, given the expected estimate.}
+\item{\code{TypeS}}{The probability that a statistically significant estimate
+has the wrong sign (Gelman and Carlin, 2014).}
+\item{\code{TypeM}}{The expected ratio of the absolute value of a
+statistically significant estimate to the true value (the
+exaggeration ratio). \code{Inf} when the true contrast is zero.}
+}
+The \code{alpha} and \code{ddf} attributes record the significance level and the
+denominator degrees-of-freedom method used.
 }
 \description{
 This function calculates the power of contrasts.

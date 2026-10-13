@@ -15,7 +15,7 @@ knitr::opts_chunk$set(
   comment = '#>'
 )
 
-options(width = 200)
+old = options(width = 200)
 ```
 
 # Introduction
@@ -360,6 +360,10 @@ Also note that, since this is a 2x2 factorial, there is only one contrast for ea
 # Polynomial Contrasts
 
 Forthcoming
+
+```{r, include=FALSE}
+options(old)
+```
 
 # References
 

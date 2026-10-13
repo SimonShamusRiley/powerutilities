@@ -19,7 +19,11 @@ method is selected based on the model type.}
 \item{...}{Other values passed to emmeans.}
 }
 \value{
-A \code{powertable} object.
+A \code{powertable} object: a data frame with one row per fixed-effect
+term and columns \code{Term}, \code{NumDF}, \code{DenDF}, \code{Fval} (expected F statistic),
+\code{Fcrit} (critical value at \code{alpha}), \code{Pval} (expected p-value) and \code{Power}.
+Attributes \code{alpha} and \code{ddf} record the significance level and the
+degrees-of-freedom method used.
 }
 \description{
 This function calculates the power of F-tests for each fixed

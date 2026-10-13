@@ -17,6 +17,12 @@ power columns}
 
 \item{...}{Unused}
 }
+\value{
+The input \code{x} (a \code{powertable} object), returned invisibly. Called
+for its side effect of printing the table with p-values, power and
+estimates rounded for display, followed by the degrees-of-freedom method
+and significance level used.
+}
 \description{
 This function controls the formatting when printing \code{powertable}
 objects.
