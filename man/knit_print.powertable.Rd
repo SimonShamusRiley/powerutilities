@@ -8,6 +8,8 @@
 }
 \arguments{
 \item{x}{A \code{powertable} object to be printed}
+
+\item{...}{Unused.}
 }
 \value{
 Invisibly returns \code{x}

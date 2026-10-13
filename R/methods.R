@@ -63,6 +63,7 @@ print.powertable = function(x, digits = 1, pdigits = getOption('pdigits', defaul
 #' @description
 #' Provides a method for outputting powertables as html
 #' @param x A `powertable` object to be printed
+#' @param ... Unused.
 #' @return Invisibly returns `x`
 #' @exportS3Method knitr::knit_print
 #' @importFrom utils capture.output
@@ -80,6 +81,7 @@ knit_print.powertable = function(x, ...) {
 #' @description
 #' Provides a method formatting and displaying retermslist objects
 #' @param x An `retermslist` object, as returned by [theta_finder()].
+#' @param ... Unused.
 #' @return The input `x` (a `retermslist` object), returned invisibly. Called
 #'   for its side effect of printing one table per random-effects term, listing
 #'   the grouping factor, the name of each random effect, and the position at

@@ -8,6 +8,8 @@
 }
 \arguments{
 \item{x}{An \code{retermslist} object, as returned by \code{\link[=theta_finder]{theta_finder()}}.}
+
+\item{...}{Unused.}
 }
 \value{
 The input \code{x} (a \code{retermslist} object), returned invisibly. Called
