@@ -20,7 +20,7 @@ Description: Prospective power analysis and design planning using
     asymptotic methods (or can be specified by users), and contrasts are
     specified through 'emmeans'. Vignettes cover estimated marginal means,
     contrast specification, and worked examples for common agricultural designs.
-Version: 0.7.0
+Version: 0.7.1
 Authors@R: 
     person("Simon", "Riley", email = "ssriley@protonmail.com", role = c("aut", "cre"), comment = c(ORCID = "0000-0002-4833-2026"))
 Depends: R (>= 4.1.0)
